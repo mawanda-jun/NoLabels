@@ -1,0 +1,37 @@
+\documentclass[conference]{IEEEtran}
+\usepackage{graphicx}
+\usepackage{amssymb}
+\usepackage{epstopdf}
+\input{sections/useful.tex}
+\DeclareGraphicsRule{.tif}{png}{.png}{`convert #1 `dirname #1`/`basename #1
+.tif`.png}
+
+\begin{document}
+\title{Studio di un \textit{Time Series Database} in un contesto applicativo reale}
+
+\author{\IEEEauthorblockN{Dr.~Giovanni Cavallin}
+\IEEEauthorblockA{Dip. di Matematica\\
+Università degli Studi di Padova\\
+Email: giovanni.cavallin.1@studenti.unipd.it}}
+
+\maketitle
+
+\input{sections/abstract.tex}
+
+\input{sections/introduzione.tex}
+
+\input{sections/implementazione.tex}
+
+\input{sections/progetti_correlati.tex}
+
+\input{sections/valutazione.tex}
+
+\input{sections/conclusioni.tex}
+
+\nocite{*} % Include everything in the .bib file.
+
+\bibliographystyle{IEEEtran}
+\bibliography{paper}
+
+% that's all, folks
+\end{document}
