@@ -1,12 +1,48 @@
 import os
 import urllib.request
 import urllib.parse as urlparse
+import threading
+
+
+def chunks(l: list, n: int):
+    """
+    Divide a list into n equal parts
+    :param l: list
+    :param n: number of chunks
+    :return: list of list of the original
+    """
+    k, m = divmod(len(l), n)
+    return (l[i * k + min(i, m):(i + 1) * k + min(i + 1, m)] for i in range(n))
+
+
+class ThreadedDownload(threading.Thread):
+    def __init__(self, name, url_list, dir_path):
+        threading.Thread.__init__(self)
+        self.name = name
+        self.url_list = url_list
+        self.dir_path = dir_path
+
+    def run(self):
+        failed = 0
+        for url in self.url_list:
+            try:
+                ImageNetDownloader.download_file(url, self.dir_path)
+            except Exception:
+                # print('Fail to download : ' + url)
+                failed += 1
+        print("Thread: {name} \nDownloaded images: {images} \nFailed: {failed}".format(
+            name=self.name,
+            images=len(self.url_list) - failed,
+            failed=failed)
+        )
+
 
 class ImageNetDownloader:
     def __init__(self):
         self.host = 'http://www.image-net.org'
 
-    def download_file(self, url, desc=None, renamed_file=None):
+    @staticmethod
+    def download_file(url, desc=None, renamed_file=None):
         u = urllib.request.urlopen(url)
 
         scheme, netloc, path, query, fragment = urlparse.urlsplit(url)
@@ -27,7 +63,7 @@ class ImageNetDownloader:
             file_size = None
             if meta_length:
                 file_size = int(meta_length[0])
-            print("Downloading: {0} Bytes: {1}".format(url, file_size))
+            # print("Downloading: {0} Bytes: {1}".format(url, file_size))
 
             file_size_dl = 0
             block_sz = 8192
@@ -46,7 +82,8 @@ class ImageNetDownloader:
 
         return filename
 
-    def getImageURLsOfWnid(self, wnid):
+    @staticmethod
+    def getImageURLsOfWnid(wnid):
         url = 'http://www.image-net.org/api/text/imagenet.synset.geturls?wnid=' + str(wnid)
         f = urllib.request.urlopen(url)
         contents = f.read().decode().split('\n')
@@ -61,22 +98,28 @@ class ImageNetDownloader:
 
     def downloadImagesByURLs(self, wnid, imageUrls, father):
         if father != "":
-            print("Sono diverso "+father)
+            # print("Sono diverso "+father)
             wnid_urlimages_dir = os.path.join(self.mkWnidDir(father), wnid)
         else:
-            print("No difference")
+            # print("No difference")
             wnid_urlimages_dir = os.path.join(self.mkWnidDir(wnid))
-        print(wnid_urlimages_dir)
-        if not os.path.exists(wnid_urlimages_dir):
-            os.mkdir(wnid_urlimages_dir)
+        # print(wnid_urlimages_dir)
+        # if not os.path.exists(wnid_urlimages_dir):
+        #     os.makedirs(wnid_urlimages_dir)
 
-        for url in imageUrls:
-            try:
-                self.download_file(url, wnid_urlimages_dir)
-            except Exception:
-                print('Fail to download : ' + url)
+        n_threads = 32
 
-    def mkWnidDir(self, wnid):
+        chunked_list = chunks(imageUrls, n_threads)
+        thread_list = []
+        for i, c_list in enumerate(chunked_list):
+            thread_list.append(ThreadedDownload(str(i), c_list, wnid_urlimages_dir))
+
+        for thread in thread_list:
+            thread.start()
+
+    @staticmethod
+    def mkWnidDir(wnid):
+        wnid = os.path.join('images', wnid)
         if not os.path.exists(wnid):
-            os.mkdir(wnid)
+            os.makedirs(wnid)
         return os.path.abspath(wnid)
