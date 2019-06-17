@@ -27,6 +27,7 @@ class ThreadedH5pyFile(threading.Thread):
         self.training_variance = np.zeros((self.img_size, self.img_size, 3), dtype=np.float32)
 
     def run(self):
+        # TODO: inserire crop immagine come descritto nel paper sezione 3.4 righe 3-5
         for i, label_and_path in enumerate(self.img_list):
             #  label_and_path contains the label and the path_to_image. It's a tuple
             if i % 1000 == 0:
