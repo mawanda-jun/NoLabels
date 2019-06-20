@@ -17,7 +17,8 @@ def square_img(im: Image.Image) -> Image:
     """
     mx = max(im.size)
     mn = min(im.size)
-
+    if mx == mn:
+        return im
     crop_shift = random.randrange(mx-mn)
     im = im.crop(
         (0, crop_shift, mn, mx + crop_shift))
@@ -165,7 +166,7 @@ def generate_h5py(file_list: List, img_size=256, hdf5_file_name: str = 'data', t
             thread.join()
 
         for i, thread in enumerate(threaded_types):
-            if thread.read_errors is not []:
+            if thread.read_errors:
                 with open('errors{}.txt'.format(i), 'w') as f:
                     f.writelines(thread.read_errors)
             if thread.training_variance is not None:
@@ -176,7 +177,7 @@ def generate_h5py(file_list: List, img_size=256, hdf5_file_name: str = 'data', t
 
 
 if __name__ == '__main__':
-    labels = ['cats', 'dogs', 'fishes']
+    res_path = os.path.join(os.getcwd(), 'resources')
 
-    images_list = images_in_paths('images')
-    generate_h5py(images_list, 256, 'dataset.h5')
+    images_list = images_in_paths(os.path.join(res_path, 'images'))
+    generate_h5py(images_list, 256, 'dataset.h5', folder=os.path.join(res_path, 'h5_files'))

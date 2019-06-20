@@ -13,7 +13,7 @@ import h5py
 NUM_CROPS = 9
 NUM_PERMUTATIONS = 100
 SELECTION = 'max'
-FOLDER = 'h5_files'
+FOLDER = os.path.join('resources', 'h5_files')
 
 
 def hamming_set(num_crops, num_permutations, selection):

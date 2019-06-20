@@ -90,17 +90,14 @@ class ImageNetDownloader:
         return filename
 
     @staticmethod
-    def downloadImagesByLines(lines):
-
-        dir = os.path.join(os.getcwd(), 'images')
-        os.makedirs(dir, exist_ok=True)  # if present doesn't do anything
-
-        n_threads = 32
+    def downloadImagesByLines(lines, dest_path, n_threads):
+        dirname = os.path.join(os.getcwd(), dest_path, 'images')
+        os.makedirs(dirname, exist_ok=True)  # if present doesn't do anything
 
         chunked_list = chunks(lines, n_threads)
         thread_list = []
         for i, c_list in enumerate(chunked_list):
-            thread_list.append(ThreadedDownload(str(i), c_list, dir))
+            thread_list.append(ThreadedDownload(str(i), c_list, dirname))
 
         for thread in thread_list:
             thread.start()
@@ -109,8 +106,12 @@ class ImageNetDownloader:
 if __name__ == '__main__':
     # count = 0
     new_urls = 'new_links.txt'
+    dest_path = 'resources'
+    n_threads = 32
+    tot_images = int(5e5)
+
     if not os.path.isfile(new_urls):
-        with open('fall11_urls.txt', 'r', encoding='latin-1') as f:
+        with open(os.path.join(dest_path, 'fall11_urls.txt'), 'r', encoding='latin-1') as f:
             # while count < totImages:
             #     dimLines = 100
             #     countLines = 0
@@ -120,12 +121,11 @@ if __name__ == '__main__':
             #         countLines = countLines + 1
             #         if countLines == dimLines:
             #             break
-            totImages = int(5e5)  # how many we want. Now 50K
             lines = f.readlines()
             random.shuffle(lines)
-            lines = lines[0:totImages]
-            with open(new_urls, 'w', encoding='latin-1') as w:
+            lines = lines[0:tot_images]
+            with open(os.path.join(dest_path, new_urls), 'w', encoding='latin-1') as w:
                 w.writelines(lines)
 
     with open(new_urls, 'r', encoding='latin-1') as f:
-        ImageNetDownloader.downloadImagesByLines(f.readlines())
+        ImageNetDownloader.downloadImagesByLines(f.readlines(), dest_path, n_threads)
