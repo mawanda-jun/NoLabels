@@ -93,6 +93,8 @@ class ImageNetDownloader:
     def downloadImagesByLines(lines):
 
         dir = os.path.join(os.getcwd(), 'images')
+        os.makedirs(dir, exist_ok=True)  # if present doesn't do anything
+
         n_threads = 32
 
         chunked_list = chunks(lines, n_threads)
@@ -105,22 +107,25 @@ class ImageNetDownloader:
 
 
 if __name__ == '__main__':
-    dir = os.path.join(os.getcwd(), 'images')
-    os.makedirs(dir, exist_ok=True)  # if present doesn't do anything
     # count = 0
-    totImages = 500          # 500K
+    new_urls = 'new_links.txt'
+    if not os.path.isfile(new_urls):
+        with open('fall11_urls.txt', 'r', encoding='latin-1') as f:
+            # while count < totImages:
+            #     dimLines = 100
+            #     countLines = 0
+            #     lines = []
+            #     for line in f:
+            #         lines.append(line)
+            #         countLines = countLines + 1
+            #         if countLines == dimLines:
+            #             break
+            totImages = int(5e5)  # how many we want. Now 50K
+            lines = f.readlines()
+            random.shuffle(lines)
+            lines = lines[0:totImages]
+            with open(new_urls, 'w', encoding='latin-1') as w:
+                w.writelines(lines)
 
-    with open('fall11_urls.txt', 'r', encoding='utf-8') as f:
-        # while count < totImages:
-        #     dimLines = 100
-        #     countLines = 0
-        #     lines = []
-        #     for line in f:
-        #         lines.append(line)
-        #         countLines = countLines + 1
-        #         if countLines == dimLines:
-        #             break
-        lines = f.readlines()
-        random.shuffle(lines)
-        lines = lines[0:totImages]
-    ImageNetDownloader.downloadImagesByLines(lines)
+    with open(new_urls, 'r', encoding='latin-1') as f:
+        ImageNetDownloader.downloadImagesByLines(f.readlines())
