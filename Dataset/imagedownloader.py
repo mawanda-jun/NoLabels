@@ -2,8 +2,6 @@ import os
 import urllib.request
 import urllib.parse as urlparse
 import threading
-from itertools import islice
-from tqdm import tqdm
 import random
 
 
@@ -112,20 +110,11 @@ if __name__ == '__main__':
 
     if not os.path.isfile(new_urls):
         with open(os.path.join(dest_path, 'fall11_urls.txt'), 'r', encoding='latin-1') as f:
-            # while count < totImages:
-            #     dimLines = 100
-            #     countLines = 0
-            #     lines = []
-            #     for line in f:
-            #         lines.append(line)
-            #         countLines = countLines + 1
-            #         if countLines == dimLines:
-            #             break
             lines = f.readlines()
             random.shuffle(lines)
             lines = lines[0:tot_images]
             with open(os.path.join(dest_path, new_urls), 'w', encoding='latin-1') as w:
                 w.writelines(lines)
 
-    with open(new_urls, 'r', encoding='latin-1') as f:
+    with open(os.path.join(dest_path, new_urls), 'r', encoding='latin-1') as f:
         ImageNetDownloader.downloadImagesByLines(f.readlines(), dest_path, n_threads)
