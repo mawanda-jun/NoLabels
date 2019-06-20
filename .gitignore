@@ -1,6 +1,5 @@
 .idea
-Dataset/images/*
-Dataset/h5_files/*
+Dataset/resources/*
 
 # Created by https://www.gitignore.io/api/latex,python,pycharm,visualstudiocode
 # Edit at https://www.gitignore.io/?templates=latex,python,pycharm,visualstudiocode
@@ -491,6 +490,3 @@ dmypy.json
 .history
 
 # End of https://www.gitignore.io/api/latex,python,pycharm,visualstudiocode
-Dataset/dataset.h5
-Dataset/fall11_urls.txt
-Dataset/new_links.txt
