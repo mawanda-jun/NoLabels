@@ -2,6 +2,8 @@ import os
 import urllib.request
 import urllib.parse as urlparse
 import threading
+from itertools import islice
+from tqdm import tqdm
 
 
 def chunks(l: list, n: int):
@@ -14,21 +16,24 @@ def chunks(l: list, n: int):
     k, m = divmod(len(l), n)
     return (l[i * k + min(i, m):(i + 1) * k + min(i + 1, m)] for i in range(n))
 
-
 class ThreadedDownload(threading.Thread):
-    def __init__(self, name, url_list, dir_path):
+    def __init__(self, name, lines_list, dir_path):
         threading.Thread.__init__(self)
         self.name = name
-        self.url_list = url_list
+        self.url_list = lines_list
         self.dir_path = dir_path
 
     def run(self):
         failed = 0
-        for url in self.url_list:
+        for line in self.url_list:
             try:
+                url = line.split('\t')[1]
+                url = url.replace('\n', '')
+                url = url.strip()
                 ImageNetDownloader.download_file(url, self.dir_path)
+
             except Exception:
-                # print('Fail to download : ' + url)
+                print('Fail to download : ' + url)
                 failed += 1
         print("Thread: {name} \nDownloaded images: {images} \nFailed: {failed}".format(
             name=self.name,
@@ -83,43 +88,38 @@ class ImageNetDownloader:
         return filename
 
     @staticmethod
-    def getImageURLsOfWnid(wnid):
-        url = 'http://www.image-net.org/api/text/imagenet.synset.geturls?wnid=' + str(wnid)
-        f = urllib.request.urlopen(url)
-        contents = f.read().decode().split('\n')
-        imageUrls = []
+    def downloadImagesByLines(lines):
 
-        for each_line in contents:
-            each_line = each_line.replace('\r', '').strip()
-            if each_line:
-                imageUrls.append(each_line)
-
-        return imageUrls
-
-    def downloadImagesByURLs(self, wnid, imageUrls, father):
-        if father != "":
-            # print("Sono diverso "+father)
-            wnid_urlimages_dir = os.path.join(self.mkWnidDir(father), wnid)
-        else:
-            # print("No difference")
-            wnid_urlimages_dir = os.path.join(self.mkWnidDir(wnid))
-        # print(wnid_urlimages_dir)
-        # if not os.path.exists(wnid_urlimages_dir):
-        #     os.makedirs(wnid_urlimages_dir)
-
+        dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'images')
         n_threads = 32
 
-        chunked_list = chunks(imageUrls, n_threads)
+        chunked_list = chunks(lines, n_threads)
         thread_list = []
         for i, c_list in enumerate(chunked_list):
-            thread_list.append(ThreadedDownload(str(i), c_list, wnid_urlimages_dir))
+            thread_list.append(ThreadedDownload(str(i), c_list, dir))
 
         for thread in thread_list:
             thread.start()
 
-    @staticmethod
-    def mkWnidDir(wnid):
-        wnid = os.path.join('images', wnid)
-        if not os.path.exists(wnid):
-            os.makedirs(wnid)
-        return os.path.abspath(wnid)
+if __name__ == '__main__':
+
+    dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'images')
+
+    if not os.path.exists(dir):
+        os.makedirs(dir)
+
+    count = 0;
+    totImages = 500;          # 500K
+
+    with open('fall11_urls.txt', 'r', encoding='utf-8') as f:
+        while count < totImages:
+            dimLines = 100
+            countLines = 0
+            lines = []
+            for line in f:
+                lines.append(line)
+                countLines = countLines + 1
+                if countLines == dimLines:
+                    break
+
+            ImageNetDownloader.downloadImagesByLines(lines)
