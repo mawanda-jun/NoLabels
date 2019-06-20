@@ -4,6 +4,7 @@ import urllib.parse as urlparse
 import threading
 from itertools import islice
 from tqdm import tqdm
+import random
 
 
 def chunks(l: list, n: int):
@@ -16,6 +17,7 @@ def chunks(l: list, n: int):
     k, m = divmod(len(l), n)
     return (l[i * k + min(i, m):(i + 1) * k + min(i + 1, m)] for i in range(n))
 
+
 class ThreadedDownload(threading.Thread):
     def __init__(self, name, lines_list, dir_path):
         threading.Thread.__init__(self)
@@ -26,10 +28,10 @@ class ThreadedDownload(threading.Thread):
     def run(self):
         failed = 0
         for line in self.url_list:
+            url = line.split('\t')[1]
+            url = url.replace('\n', '')
+            url = url.strip()
             try:
-                url = line.split('\t')[1]
-                url = url.replace('\n', '')
-                url = url.strip()
                 ImageNetDownloader.download_file(url, self.dir_path)
 
             except Exception:
@@ -90,7 +92,7 @@ class ImageNetDownloader:
     @staticmethod
     def downloadImagesByLines(lines):
 
-        dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'images')
+        dir = os.path.join(os.getcwd(), 'images')
         n_threads = 32
 
         chunked_list = chunks(lines, n_threads)
@@ -101,25 +103,24 @@ class ImageNetDownloader:
         for thread in thread_list:
             thread.start()
 
+
 if __name__ == '__main__':
-
-    dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'images')
-
-    if not os.path.exists(dir):
-        os.makedirs(dir)
-
-    count = 0;
-    totImages = 500;          # 500K
+    dir = os.path.join(os.getcwd(), 'images')
+    os.makedirs(dir, exist_ok=True)  # if present doesn't do anything
+    # count = 0
+    totImages = 500          # 500K
 
     with open('fall11_urls.txt', 'r', encoding='utf-8') as f:
-        while count < totImages:
-            dimLines = 100
-            countLines = 0
-            lines = []
-            for line in f:
-                lines.append(line)
-                countLines = countLines + 1
-                if countLines == dimLines:
-                    break
-
-            ImageNetDownloader.downloadImagesByLines(lines)
+        # while count < totImages:
+        #     dimLines = 100
+        #     countLines = 0
+        #     lines = []
+        #     for line in f:
+        #         lines.append(line)
+        #         countLines = countLines + 1
+        #         if countLines == dimLines:
+        #             break
+        lines = f.readlines()
+        random.shuffle(lines)
+        lines = lines[0:totImages]
+    ImageNetDownloader.downloadImagesByLines(lines)
