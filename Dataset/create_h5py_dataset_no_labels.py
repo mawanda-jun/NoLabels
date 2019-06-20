@@ -9,6 +9,18 @@ import threading
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 
+def square_img(im: Image) -> Image:
+    if im.size[1] > im.size[0]:
+        crop_shift = random.randrange(im.size[1] - im.size[0])
+        im = im.crop(
+            (0, crop_shift, im.size[0], im.size[0] + crop_shift))
+    elif im.size[0] > im.size[1]:
+        crop_shift = random.randrange(im.size[0] - im.size[1])
+        im = im.crop(
+            (crop_shift, 0, im.size[1] + crop_shift, im.size[1]))
+    return im
+
+
 class ThreadedH5pyFile(threading.Thread):
     """
     Threaded version to prepare the dataset. Everything runs smoothly because we have multiple labels that avoid
@@ -26,7 +38,6 @@ class ThreadedH5pyFile(threading.Thread):
         self.training_variance = np.zeros((self.img_size, self.img_size, 3), dtype=np.float32)
 
     def run(self):
-        # TODO: inserire crop immagine come descritto nel paper sezione 3.4 righe 3-5
         for i, path in enumerate(self.img_list):
             #  path contains the label and the path_to_image. It's a tuple
             if i % 1000 == 0:
@@ -41,6 +52,9 @@ class ThreadedH5pyFile(threading.Thread):
                 img = Image.open(path)
                 # in case of b/w images it doesn't breaks the line
                 if img.mode == 'RGB':
+                    # CHECK IF NECESSARY
+                    img = square_img(img)
+
                     img = img.resize((self.img_size, self.img_size), resample=Image.LANCZOS)
                     # convert pillow image into a np array
                     np_img = np.array(img)
