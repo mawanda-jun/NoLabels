@@ -9,15 +9,19 @@ import threading
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 
-def square_img(im: Image) -> Image:
-    if im.size[1] > im.size[0]:
-        crop_shift = random.randrange(im.size[1] - im.size[0])
-        im = im.crop(
-            (0, crop_shift, im.size[0], im.size[0] + crop_shift))
-    elif im.size[0] > im.size[1]:
-        crop_shift = random.randrange(im.size[0] - im.size[1])
-        im = im.crop(
-            (crop_shift, 0, im.size[1] + crop_shift, im.size[1]))
+def square_img(im: Image.Image) -> Image:
+    """
+
+    :param im:
+    :return:
+    """
+    mx = max(im.size)
+    mn = min(im.size)
+
+    crop_shift = random.randrange(mx-mn)
+    im = im.crop(
+        (0, crop_shift, mn, mx + crop_shift))
+
     return im
 
 
