@@ -46,7 +46,7 @@ class DataGenerator:
         self.batchIndexVal = 0
         self.batchIndexTest = 0
 
-    def __data_generation_normalize(self, x):
+    def __batch_generation_normalized(self, x):
         """
         Explain
         """
@@ -57,11 +57,13 @@ class DataGenerator:
         # Python list of 4D numpy tensors for each channel
         X = [np.empty((self.batchSize, self.tileSize, self.tileSize, self.numChannels), np.float32)
              for _ in range(self.numCrops)]
+
         for image_num in range(self.batchSize):
             # Transform the image into its nine crops
             single_image, y[image_num] = self.create_croppings(x[image_num])
             for image_location in range(self.numCrops):
                 X[image_location][image_num, :, :, :] = single_image[:, :, :, image_location]
+
         return X, y
 
     def one_hot(self, y):
@@ -80,7 +82,7 @@ class DataGenerator:
             h5f.close()
             if self.numChannels == 1:
                 x = np.expand_dims(x, axis=-1)
-            X, y = self.__data_generation_normalize(x.astype(np.float32))
+            X, y = self.__batch_generation_normalized(x.astype(np.float32))
             self.batchIndexTrain += 1  # Increment the batch index
             if self.batchIndexTrain == self.numTrainBatch:
                 self.batchIndexTrain = 0
@@ -90,7 +92,7 @@ class DataGenerator:
             h5f.close()
             if self.numChannels == 1:
                 x = np.expand_dims(x, axis=-1)
-            X, y = self.__data_generation_normalize(x.astype(np.float32))
+            X, y = self.__batch_generation_normalized(x.astype(np.float32))
             self.batchIndexVal += 1  # Increment the batch index
             if self.batchIndexVal == self.numValBatch:
                 self.batchIndexVal = 0
@@ -100,7 +102,7 @@ class DataGenerator:
             h5f.close()
             if self.numChannels == 1:
                 x = np.expand_dims(x, axis=-1)
-            X, y = self.__data_generation_normalize(x.astype(np.float32))
+            X, y = self.__batch_generation_normalized(x.astype(np.float32))
             self.batchIndexTest += 1  # Increment the batch index
             if self.batchIndexTest == self.numTestBatch:
                 self.batchIndexTest = 0
