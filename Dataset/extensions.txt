@@ -1,0 +1,6 @@
+
+.jpeg
+.JPG
+.bmp
+.png
+.jpg
