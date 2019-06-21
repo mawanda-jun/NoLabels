@@ -1,10 +1,10 @@
 import os
 import urllib
-import urllib.error
+from urllib.error import URLError
 import urllib.request
 import threading
 import random
-import socket
+from PIL import Image
 
 
 def chunks(l: list, n: int):
@@ -53,39 +53,20 @@ class ImageNetDownloader:
         if not os.path.isfile(os.path.join(desc, filename)):
             try:
                 urllib.request.urlretrieve(url, os.path.join(desc, filename))
-            except socket.error:
-                # check if there is internet connection before downloading -> it is not creating empty files because
-                # of lack of connection
-                raise OSError('No internet connection')
-            except urllib.error:
+            except URLError:
                 with open(os.path.join(desc, filename), 'w') as f:
                     f.write('File not found')
-        # if desc:
-        #     filename = os.path.join(desc, filename)
-        # if not os.path.isfile(filename):
-        #     with open(filename, 'wb') as f:
-        #         meta = u.info()
-        #         meta_func = meta.getheaders if hasattr(meta, 'getheaders') else meta.get_all
-        #         meta_length = meta_func("Content-Length")
-        #         file_size = None
-        #         if meta_length:
-        #             file_size = int(meta_length[0])
-        #         # print("Downloading: {0} Bytes: {1}".format(url, file_size))
-        #
-        #         file_size_dl = 0
-        #         block_sz = 8192
-        #         while True:
-        #             buffer = u.read(block_sz)
-        #             if not buffer:
-        #                 break
-        #
-        #             file_size_dl += len(buffer)
-        #             f.write(buffer)
-        #
-        #             status = "{0:16}".format(file_size_dl)
-        #             if file_size:
-        #                 status += "   [{0:6.2f}%]".format(file_size_dl * 100 / file_size)
-        #             status += chr(13)
+        else:
+            # when resuming download, this check if images are available this time
+            try:
+                Image.open(os.path.join(desc, filename))
+            except OSError:
+                try:
+                    urllib.request.urlretrieve(url, os.path.join(desc, filename))
+                    print('Recovered image {}'.format(filename))
+                except URLError:
+                    with open(os.path.join(desc, filename), 'w') as f:
+                        f.write('File not found')
 
         return filename
 
@@ -107,7 +88,7 @@ if __name__ == '__main__':
     # count = 0
     new_urls = 'new_links.txt'
     dest_path = 'resources'
-    n_threads = 10
+    n_threads = 2
     tot_images = int(2e5)
     random.seed(3)  # force shuffle order
     if not os.path.isfile(new_urls):
