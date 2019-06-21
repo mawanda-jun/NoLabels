@@ -1,4 +1,5 @@
 import os
+from PIL import Image
 
 
 def rename_images(folder_path):
@@ -20,6 +21,18 @@ def rename_images(folder_path):
                 os.rename(os.path.join(os.getcwd(), root, file), os.path.join(os.getcwd(), root, file + '.jpeg'))
 
 
+def find_unopenable(path_to_folder):
+    errors = set([])
+    for root, dirs, files in os.walk(path_to_folder):
+        for file in files:
+            try:
+                Image.open(os.path.join(root, file))
+            except OSError as e:
+                errors.add(str(e) + '\n')
+    with open('errors.txt', 'w') as f:
+        f.writelines(errors)
+
+
 def delete_images(errors_filename):
     """
     Delete all images that the algorithm in "create_h5py_dataset" has not been able to open
@@ -39,5 +52,7 @@ def delete_images(errors_filename):
 
 
 if __name__ == '__main__':
-    rename_images('images')
-    delete_images('errors0.txt')
+    dirpath = os.path.join('resources', 'images')
+    rename_images(dirpath)
+    find_unopenable(dirpath)
+    delete_images('errors.txt')
