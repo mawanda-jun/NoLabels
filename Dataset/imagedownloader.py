@@ -88,7 +88,7 @@ if __name__ == '__main__':
     # count = 0
     new_urls = 'new_links.txt'
     dest_path = 'resources'
-    n_threads = 2
+    n_threads = 30
     tot_images = int(2e5)
     random.seed(3)  # force shuffle order
     if not os.path.isfile(new_urls):
