@@ -32,7 +32,8 @@ class ThreadedDownload(threading.Thread):
             url = url.replace('\n', '')
             url = url.strip()
             try:
-                ImageNetDownloader.download_file(url, self.dir_path)
+                ImageNetDownloader.download_file(url, self.dir_path, self.name + '_' + str(i) + '.jpeg')
+                # ImageNetDownloader.download_file(url, self.dir_path)
             except Exception:
                 # print('Fail to download : ' + url)
                 failed += 1
@@ -49,42 +50,44 @@ class ImageNetDownloader:
 
     @staticmethod
     def download_file(url, desc=None, renamed_file=None):
-        u = urllib.request.urlopen(url)
+        # u = urllib.request.urlopen(url)
 
-        scheme, netloc, path, query, fragment = urlparse.urlsplit(url)
-        filename = os.path.basename(path)
+        # scheme, netloc, path, query, fragment = urlparse.urlsplit(url)
+        # filename = os.path.basename(path)
+        filename = os.path.basename(url)
         if not filename:
-            filename = 'downloaded.file'
+            filename = 'downloaded.jpeg'
 
-        if not renamed_file is None:
+        if renamed_file is not None:
             filename = renamed_file
-
-        if desc:
-            filename = os.path.join(desc, filename)
-        if not os.path.isfile(filename):
-            with open(filename, 'wb') as f:
-                meta = u.info()
-                meta_func = meta.getheaders if hasattr(meta, 'getheaders') else meta.get_all
-                meta_length = meta_func("Content-Length")
-                file_size = None
-                if meta_length:
-                    file_size = int(meta_length[0])
-                # print("Downloading: {0} Bytes: {1}".format(url, file_size))
-
-                file_size_dl = 0
-                block_sz = 8192
-                while True:
-                    buffer = u.read(block_sz)
-                    if not buffer:
-                        break
-
-                    file_size_dl += len(buffer)
-                    f.write(buffer)
-
-                    status = "{0:16}".format(file_size_dl)
-                    if file_size:
-                        status += "   [{0:6.2f}%]".format(file_size_dl * 100 / file_size)
-                    status += chr(13)
+        if not os.path.isfile(os.path.join(desc, filename)):
+            urllib.request.urlretrieve(url, os.path.join(desc, filename))
+        # if desc:
+        #     filename = os.path.join(desc, filename)
+        # if not os.path.isfile(filename):
+        #     with open(filename, 'wb') as f:
+        #         meta = u.info()
+        #         meta_func = meta.getheaders if hasattr(meta, 'getheaders') else meta.get_all
+        #         meta_length = meta_func("Content-Length")
+        #         file_size = None
+        #         if meta_length:
+        #             file_size = int(meta_length[0])
+        #         # print("Downloading: {0} Bytes: {1}".format(url, file_size))
+        #
+        #         file_size_dl = 0
+        #         block_sz = 8192
+        #         while True:
+        #             buffer = u.read(block_sz)
+        #             if not buffer:
+        #                 break
+        #
+        #             file_size_dl += len(buffer)
+        #             f.write(buffer)
+        #
+        #             status = "{0:16}".format(file_size_dl)
+        #             if file_size:
+        #                 status += "   [{0:6.2f}%]".format(file_size_dl * 100 / file_size)
+        #             status += chr(13)
 
         return filename
 
@@ -106,7 +109,7 @@ if __name__ == '__main__':
     # count = 0
     new_urls = 'new_links.txt'
     dest_path = 'resources'
-    n_threads = 60
+    n_threads = 30
     tot_images = int(2e5)
     random.seed(3)  # force shuffle order
     if not os.path.isfile(new_urls):
