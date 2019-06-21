@@ -9,19 +9,22 @@ import itertools
 import os
 from scipy.spatial.distance import cdist
 import h5py
+from config import args
 
-NUM_CROPS = 9
-NUM_PERMUTATIONS = 100
-SELECTION = 'max'
+NUM_CROPS = args.numCrops
+NUM_PERMUTATIONS = args.hammingSetSize
+SELECTION = args.selectionMethod
+FILENAME = args.hammingFileName
 FOLDER = os.path.join('resources', 'h5_files')
 
 
-def hamming_set(num_crops, num_permutations, selection):
+def hamming_set(num_crops=NUM_CROPS, num_permutations=NUM_PERMUTATIONS, selection=SELECTION, filename=FILENAME):
     """
     generate and save the hamming set
     :param num_crops: number of tiles from each image
     :param num_permutations: Number of permutations to select (i.e. number of classes for the pretext task)
     :param selection: Sample selected per iteration based on hamming distance: [max] highest; [mean] average
+    :param filename: name of file
     :return a list of different permutations: [[perm1], [perm2], ...]. Each permutation is in form (10_elements)
     """
     # create different permutation for num_crops (i.e: num_crops=9, P_hat[0]=(0, 1, 2, 4, 5, 3, 7, 8, 6, 9)
@@ -46,14 +49,15 @@ def hamming_set(num_crops, num_permutations, selection):
             m = int(D.shape[0] / 2)
             S = D.argsort()
             j = S[np.random.randint(m - 10, m + 10)]
-    return P
+
+    os.makedirs(FOLDER, exist_ok=True)
+
+    with h5py.File(os.path.join(os.getcwd(), FOLDER, filename + str(NUM_PERMUTATIONS) + '.h5'), 'w') as h5f:
+        h5f.create_dataset('max_hamming_set', data=P)
+
+    print('file created --> ' + FOLDER + filename + str(NUM_PERMUTATIONS) + '.h5')
 
 
 if __name__ == "__main__":
-    hs = hamming_set(NUM_CROPS, NUM_PERMUTATIONS, SELECTION)
-    os.makedirs(FOLDER, exist_ok=True)
+    hamming_set()
 
-    with h5py.File(os.path.join(os.getcwd(), FOLDER, 'hamming_set_' + str(NUM_PERMUTATIONS) + '.h5'), 'w') as h5f:
-        h5f.create_dataset('max_hamming_set', data=hs)
-
-    print('file created --> ' + FOLDER + 'humming_set_' + str(NUM_PERMUTATIONS) + '.h5')
