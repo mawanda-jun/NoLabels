@@ -109,7 +109,7 @@ if __name__ == '__main__':
     dest_path = 'resources'
     n_threads = 32
     tot_images = int(5e5)
-
+    random.seed(3)  # force shuffle order
     if not os.path.isfile(new_urls):
         with open(os.path.join(dest_path, 'fall11_urls.txt'), 'r', encoding='latin-1') as f:
             # while count < totImages:
