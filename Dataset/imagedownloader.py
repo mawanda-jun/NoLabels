@@ -24,24 +24,16 @@ class ThreadedDownload(threading.Thread):
         self.dir_path = dir_path
 
     def run(self):
-        failed = 0
         for i, line in enumerate(self.url_list):
             if i % 100 == 0:
                 print('Thread {n} processed {i} urls'.format(n=self.name, i=i))
             url = line.split('\t')[1]
             url = url.replace('\n', '')
             url = url.strip()
-            try:
-                ImageNetDownloader.download_file(url, self.dir_path, self.name + '_' + str(i) + '.jpeg')
-                # ImageNetDownloader.download_file(url, self.dir_path)
-            except Exception:
-                # print('Fail to download : ' + url)
-                failed += 1
-        print("Thread: {name} \nDownloaded images: {images} \nFailed: {failed}".format(
+            ImageNetDownloader.download_file(url, self.dir_path, self.name + '_' + str(i) + '.jpeg')
+        print("Thread: {name} \nDownloaded images: {images}".format(
             name=self.name,
-            images=len(self.url_list) - failed,
-            failed=failed)
-        )
+            images=len(self.url_list)))
 
 
 class ImageNetDownloader:
@@ -61,7 +53,11 @@ class ImageNetDownloader:
         if renamed_file is not None:
             filename = renamed_file
         if not os.path.isfile(os.path.join(desc, filename)):
-            urllib.request.urlretrieve(url, os.path.join(desc, filename))
+            try:
+                urllib.request.urlretrieve(url, os.path.join(desc, filename))
+            except Exception:
+                with open(os.path.join(desc, filename), 'w') as f:
+                    f.write('File not found')
         # if desc:
         #     filename = os.path.join(desc, filename)
         # if not os.path.isfile(filename):
