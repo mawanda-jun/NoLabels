@@ -13,7 +13,7 @@ from loss_ops import cross_entropy_loss
 from ops import *
 from AlexNet import AlexNet
 import numpy as np
-from DataLoader.DataGenerator import DataGenerator
+from Dataset.crops_generator import CropsGenerator
 import os
 
 
@@ -33,6 +33,7 @@ class Siamese_AlexNet(object):
         with tf.name_scope('Input'):
             x = tf.placeholder(tf.float32, self.input_shape, name='x_input')
             y = tf.placeholder(tf.float32, shape=(None, self.conf.hammingSetSize), name='y_input')
+            # placeholder for keep probability in dropout layers
             keep_prob = tf.placeholder(tf.float32)
         return x, y, keep_prob
 
@@ -40,14 +41,21 @@ class Siamese_AlexNet(object):
         # Build the Network
         with tf.variable_scope('Siamese') as scope:
             Siamese_out = []
-            x = tf.unstack(self.x, axis=-1)
+            x = tf.unstack(self.x, axis=-1)  # TODO: what the hell is this?
             for i in range(self.conf.numCrops):
+                # stacking different nets together
                 Siamese_out.append(AlexNet(x[i], self.keep_prob, self.is_train))
                 if i < self.conf.numCrops:
+                    # Share parameters defined inside <scope>.
+                    # Inside AlexNet the name of the layers are defined. Every
+                    # iteration of this for loop will use the layers between all nets
                     scope.reuse_variables()
+
         net = tf.concat(Siamese_out, axis=1)
+        # last layers with which we make inference
         net = fc_layer(net, 4096, 'FC2', is_train=self.is_train, batch_norm=True, use_relu=True)
         net = dropout(net, self.keep_prob)
+        # logits are another name to call the labels, y or whatever
         self.logits = fc_layer(net, self.conf.hammingSetSize, 'FC3',
                                is_train=self.is_train, batch_norm=True, use_relu=False)
 
@@ -108,7 +116,7 @@ class Siamese_AlexNet(object):
     def train(self):
         self.sess.run(tf.local_variables_initializer())
         self.best_validation_accuracy = 0
-        self.data_reader = DataGenerator(self.conf, self.HammingSet)
+        self.data_reader = CropsGenerator(self.conf, self.HammingSet)
         if self.conf.reload_step > 0:
             self.reload(self.conf.reload_step)
             print('*' * 50)
@@ -121,7 +129,7 @@ class Siamese_AlexNet(object):
         for epoch in range(1, self.conf.max_epoch):
             # self.data_reader.randomize()
             self.is_train = True
-            for train_step in range(self.data_reader.numTrainBatch):
+            for train_step in range(self.data_reader.num_train_batch):
                 x_batch, y_batch = self.data_reader.generate(mode='train')
                 feed_dict = {self.x: x_batch, self.y: y_batch, self.keep_prob: 0.5}
                 if train_step % self.conf.SUMMARY_FREQ == 0:
@@ -130,7 +138,7 @@ class Siamese_AlexNet(object):
                                                       self.mean_accuracy_op,
                                                       self.merged_summary], feed_dict=feed_dict)
                     loss, acc = self.sess.run([self.mean_loss, self.mean_accuracy])
-                    global_step = (epoch-1) * self.data_reader.numTrainBatch + train_step
+                    global_step = (epoch-1) * self.data_reader.num_train_batch + train_step
                     self.save_summary(summary, global_step, mode='train')
                     print('step: {0:<6}, train_loss= {1:.4f}, train_acc={2:.01%}'.format(train_step, loss, acc))
                 else:
@@ -140,14 +148,14 @@ class Siamese_AlexNet(object):
     def evaluate(self, epoch):
         self.is_train = False
         self.sess.run(tf.local_variables_initializer())
-        for step in range(self.data_reader.numValBatch):
+        for step in range(self.data_reader.num_val_batch):
             x_val, y_val = self.data_reader.generate(mode='valid')
             feed_dict = {self.x: x_val, self.y: y_val, self.keep_prob: 1}
             self.sess.run([self.mean_loss_op, self.mean_accuracy_op], feed_dict=feed_dict)
 
         summary_valid = self.sess.run(self.merged_summary, feed_dict=feed_dict)
         valid_loss, valid_acc = self.sess.run([self.mean_loss, self.mean_accuracy])
-        self.save_summary(summary_valid, epoch * self.data_reader.numTrainBatch, mode='valid')
+        self.save_summary(summary_valid, epoch * self.data_reader.num_train_batch, mode='valid')
         if valid_acc > self.best_validation_accuracy:
             self.best_validation_accuracy = valid_acc
             self.save(epoch)
@@ -161,10 +169,10 @@ class Siamese_AlexNet(object):
 
     def test(self, epoch_num):
         self.reload(epoch_num)
-        self.data_reader = DataGenerator(self.conf, self.HammingSet)
+        self.data_reader = CropsGenerator(self.conf, self.HammingSet)
         self.is_train = False
         self.sess.run(tf.local_variables_initializer())
-        for step in range(self.data_reader.numTestBatch):
+        for step in range(self.data_reader.num_test_batch):
             x_test, y_test = self.data_reader.generate(mode='test')
             feed_dict = {self.x: x_test, self.y: y_test, self.keep_prob: 1}
             self.sess.run([self.mean_loss_op, self.mean_accuracy_op], feed_dict=feed_dict)
