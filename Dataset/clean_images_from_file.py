@@ -38,7 +38,6 @@ def find_unopenable(path_to_folder):
         f.writelines(too_little)
 
 
-
 def delete_images(errors_filename, too_little_filename):
     """
     Delete all images that the algorithm in "create_h5py_dataset" has not been able to open

@@ -1,8 +1,10 @@
 import os
+import urllib
+import urllib.error
 import urllib.request
-import urllib.parse as urlparse
 import threading
 import random
+import socket
 
 
 def chunks(l: list, n: int):
@@ -25,7 +27,7 @@ class ThreadedDownload(threading.Thread):
 
     def run(self):
         for i, line in enumerate(self.url_list):
-            if i % 100 == 0:
+            if i % 10 == 0:
                 print('Thread {n} processed {i} urls'.format(n=self.name, i=i))
             url = line.split('\t')[1]
             url = url.replace('\n', '')
@@ -42,10 +44,6 @@ class ImageNetDownloader:
 
     @staticmethod
     def download_file(url, desc=None, renamed_file=None):
-        # u = urllib.request.urlopen(url)
-
-        # scheme, netloc, path, query, fragment = urlparse.urlsplit(url)
-        # filename = os.path.basename(path)
         filename = os.path.basename(url)
         if not filename:
             filename = 'downloaded.jpeg'
@@ -55,7 +53,11 @@ class ImageNetDownloader:
         if not os.path.isfile(os.path.join(desc, filename)):
             try:
                 urllib.request.urlretrieve(url, os.path.join(desc, filename))
-            except Exception:
+            except socket.error:
+                # check if there is internet connection before downloading -> it is not creating empty files because
+                # of lack of connection
+                raise OSError('No internet connection')
+            except urllib.error:
                 with open(os.path.join(desc, filename), 'w') as f:
                     f.write('File not found')
         # if desc:
@@ -105,7 +107,7 @@ if __name__ == '__main__':
     # count = 0
     new_urls = 'new_links.txt'
     dest_path = 'resources'
-    n_threads = 30
+    n_threads = 10
     tot_images = int(2e5)
     random.seed(3)  # force shuffle order
     if not os.path.isfile(new_urls):
