@@ -1,11 +1,12 @@
 import tensorflow as tf
+import os
 
 # flags = tf.app.flags
 flags = tf.flags
 
 # General network setup
 flags.DEFINE_string('mode', 'train', 'train or test')
-flags.DEFINE_string('model', 'vector_capsule', 'matrix_capsule or vector_capsule or alexnet')
+flags.DEFINE_string('model', 'alexnet', 'matrix_capsule or vector_capsule or alexnet')
 flags.DEFINE_string('loss_type', 'margin', 'spread or margin or cross_entropy')
 flags.DEFINE_boolean('add_decoder', False, 'Adds a fully connected decoder and reconstruction loss')
 flags.DEFINE_float('alpha', 0.0005, 'Regularization coefficient to scale down the reconstruction loss')
@@ -41,7 +42,7 @@ flags.DEFINE_integer('prim_caps_dim', 128, 'Dimension of the primary capsules')
 
 # hamming set
 flags.DEFINE_boolean('generateHammingSet', False, 'Generate a new HammingSet')
-flags.DEFINE_integer('hammingSetSize', 100, 'Hamming set size')
+flags.DEFINE_integer('hammingSetSize', 69, 'Hamming set size')
 flags.DEFINE_string('selectionMethod', 'max', 'max or mean')
 flags.DEFINE_string('hammingFileName', 'max_hamming_set_', 'Name of the file to be saved')
 
@@ -74,6 +75,7 @@ flags.DEFINE_integer('depth', 32, 'Input depth size')
 flags.DEFINE_integer('numChannels', 3, 'Input channel size')
 
 # Directories and settings
+flags.DEFINE_string('resources', os.path.join('resources', 'h5_files'), 'Path to h5 files folder')
 flags.DEFINE_string('run_name', 'run01', 'Run name')
 flags.DEFINE_string('logdir', './Results/log_dir/', 'Logs directory')
 flags.DEFINE_string('modeldir', './Results/model_dir/', 'Saved models directory')
