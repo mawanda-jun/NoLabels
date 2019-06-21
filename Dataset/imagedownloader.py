@@ -53,7 +53,7 @@ class ImageNetDownloader:
         if not os.path.isfile(os.path.join(desc, filename)):
             try:
                 urllib.request.urlretrieve(url, os.path.join(desc, filename))
-            except URLError:
+            except Exception:
                 with open(os.path.join(desc, filename), 'w') as f:
                     f.write('File not found')
         else:
@@ -63,7 +63,7 @@ class ImageNetDownloader:
             except OSError:
                 try:
                     urllib.request.urlretrieve(url, os.path.join(desc, filename))
-                    print('Recovered image {}'.format(filename))
+                    print('----> Recovered image {}'.format(filename))
                 except URLError:
                     with open(os.path.join(desc, filename), 'w') as f:
                         f.write('File not found')
