@@ -1,5 +1,5 @@
 import tensorflow as tf
-from EM import matrix_capsules_em_routing
+from nets.CapsNet.matrix_capsnet.EM import matrix_capsules_em_routing
 import numpy as np
 
 

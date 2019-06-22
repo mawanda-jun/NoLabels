@@ -1,7 +1,7 @@
 import tensorflow as tf
-from layers.Conv_Caps import ConvCapsuleLayer
+from tensorflow.python.keras import layers
+from tensorflow.python.layers.Conv_Caps import ConvCapsuleLayer
 from layers.FC_Caps import FCCapsuleLayer
-from keras import layers
 
 
 class VectorCapsNet:

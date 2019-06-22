@@ -1,10 +1,10 @@
-from keras import initializers, layers
-import keras.backend as K
+from tensorflow.python.keras import initializers, layers
+import tensorflow.python.keras.backend as K
 import tensorflow as tf
 import numpy as np
-from keras.utils.conv_utils import conv_output_length
+from tensorflow.python.keras.utils.conv_utils import conv_output_length
 
-from ops import squash
+from nets.CapsNet.vector_capsnet.layers.ops import squash
 
 
 class FCCapsuleLayer(layers.Layer):

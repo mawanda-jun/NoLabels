@@ -1,8 +1,8 @@
-from keras import initializers, layers
-import keras.backend as K
+from tensorflow.python.keras import initializers, layers
+import tensorflow.python.keras.backend as K
 import tensorflow as tf
 import numpy as np
-from keras.utils.conv_utils import conv_output_length
+from tensorflow.python.keras.utils.conv_utils import conv_output_length
 
 
 def update_routing(votes, biases, logit_shape, num_dims, input_dim, output_dim, num_routing):

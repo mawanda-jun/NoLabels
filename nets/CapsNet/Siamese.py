@@ -10,12 +10,12 @@ paper: "Deep Residual Learning for Image Recognition"
 **********************************************************************************
 """
 import numpy as np
-from DataLoader.DataGenerator import DataGenerator
+from Dataset.crops_generator import CropsGenerator
 import os
 import tensorflow as tf
-from models.CapsNet.loss_ops import margin_loss, spread_loss
-from models.CapsNet.matrix_capsnet.ops import capsule_fc
-from models.CapsNet.vector_capsnet.layers.FC_Caps import FCCapsuleLayer
+from nets.CapsNet.loss_ops import margin_loss, spread_loss
+from nets.CapsNet.matrix_capsnet.ops import capsule_fc
+from nets.CapsNet.vector_capsnet.layers.FC_Caps import FCCapsuleLayer
 
 
 class SiameseCapsNet(object):
@@ -41,7 +41,7 @@ class SiameseCapsNet(object):
     def inference(self):
         # Build the Network
         if self.conf.model == 'matrix_capsule':
-            from models.CapsNet.matrix_capsnet.MatrixCapsNet import MatrixCapsNet
+            from nets.CapsNet.matrix_capsnet.MatrixCapsNet import MatrixCapsNet
             Network = MatrixCapsNet(self.conf, self.is_train)
             with tf.variable_scope('Siamese', reuse=tf.AUTO_REUSE):
                 act_list = []
@@ -68,9 +68,9 @@ class SiameseCapsNet(object):
 
         else:
             if self.conf.model == 'vector_capsule':
-                from models.CapsNet.vector_capsnet.VectorCapsNet import VectorCapsNet as CapsNet
+                from nets.CapsNet.vector_capsnet.VectorCapsNet import VectorCapsNet as CapsNet
             elif self.conf.model == 'orig_capsule':
-                from models.CapsNet.vector_capsnet.OrigCapsNet import OrigCapsNet as CapsNet
+                from nets.CapsNet.vector_capsnet.OrigCapsNet import OrigCapsNet as CapsNet
             Network = CapsNet(self.conf, self.is_train)
             reuse = False
             with tf.variable_scope('Siamese', reuse=reuse):
@@ -200,7 +200,7 @@ class SiameseCapsNet(object):
     def train(self):
         self.sess.run(tf.local_variables_initializer())
         self.best_validation_accuracy = 0
-        self.data_reader = DataGenerator(self.conf, self.HammingSet)
+        self.data_reader = CropsGenerator(self.conf, self.HammingSet)
         if self.conf.reload_step > 0:
             self.reload(self.conf.reload_step)
             print('*' * 50)
@@ -213,7 +213,7 @@ class SiameseCapsNet(object):
         for epoch in range(1, self.conf.max_epoch):
             # self.data_reader.randomize()
             self.is_train = True
-            for train_step in range(self.data_reader.numTrainBatch):
+            for train_step in range(self.data_reader.num_train_batch):
                 x_batch, y_batch = self.data_reader.generate(mode='train')
                 feed_dict = {self.x: x_batch, self.y: y_batch}
                 if train_step % self.conf.SUMMARY_FREQ == 0:
@@ -222,7 +222,7 @@ class SiameseCapsNet(object):
                                                       self.mean_accuracy_op,
                                                       self.merged_summary], feed_dict=feed_dict)
                     loss, acc = self.sess.run([self.mean_loss, self.mean_accuracy])
-                    global_step = (epoch - 1) * self.data_reader.numTrainBatch + train_step
+                    global_step = (epoch - 1) * self.data_reader.num_train_batch + train_step
                     self.save_summary(summary, global_step, mode='train')
                     print('step: {0:<6}, train_loss= {1:.4f}, train_acc={2:.2f}%'.format(train_step, loss, acc * 100))
                 else:
@@ -253,10 +253,10 @@ class SiameseCapsNet(object):
 
     def test(self, epoch_num):
         self.reload(epoch_num)
-        self.data_reader = DataGenerator(self.conf, self.HammingSet)
+        self.data_reader = CropsGenerator(self.conf, self.HammingSet)
         self.is_train = False
         self.sess.run(tf.local_variables_initializer())
-        for step in range(self.data_reader.numTestBatch):
+        for step in range(self.data_reader.num_test_batch):
             x_test, y_test = self.data_reader.generate(mode='test')
             feed_dict = {self.x: x_test, self.y: y_test}
             self.sess.run([self.mean_loss_op, self.mean_accuracy_op], feed_dict=feed_dict)
