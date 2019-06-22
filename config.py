@@ -59,10 +59,11 @@ flags.DEFINE_integer('SUMMARY_FREQ', 100, 'Number of step to save summary')
 flags.DEFINE_integer('VAL_FREQ', 1000, 'Number of step to evaluate the network on Validation data')
 
 # Hyper-parameters
-flags.DEFINE_integer('batchSize', 2, 'training batch size')
-flags.DEFINE_integer('val_batch_size', 2, 'validation batch size')
+flags.DEFINE_integer('batchSize', 6, 'training batch size')
+flags.DEFINE_integer('val_batch_size', 6, 'validation batch size')
 flags.DEFINE_float('init_lr', 1e-3, 'Initial learning rate')
 flags.DEFINE_float('lr_min', 1e-5, 'Minimum learning rate')
+flags.DEFINE_float('keep_prob', 0.5, 'Keep probability for dropout layer')
 
 # data
 flags.DEFINE_integer('N', 14379, 'Total number of training examples')

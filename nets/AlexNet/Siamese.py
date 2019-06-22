@@ -136,7 +136,7 @@ class Siamese_AlexNet(object):
             self.is_train = True
             for train_step in range(self.data_reader.num_train_batch):
                 x_batch, y_batch = self.data_reader.generate(mode='train')
-                feed_dict = {self.x: x_batch, self.y: y_batch, self.keep_prob: 0.5}
+                feed_dict = {self.x: x_batch, self.y: y_batch, self.keep_prob: self.conf.keep_prob}
                 if train_step % self.conf.SUMMARY_FREQ == 0:
                     _, _, _, summary = self.sess.run([self.train_op,
                                                       self.mean_loss_op,
