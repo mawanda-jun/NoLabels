@@ -23,9 +23,10 @@ class CropsGenerator:
         self.numClasses = self.maxHammingSet.shape[0]  # number of different jigsaw classes
 
         with h5py.File(self.data_path, 'r') as h5f:
-            self.num_train_batch = h5f['train_img'][:].shape[0] // self.batchSize
-            self.num_val_batch = h5f['val_img'][:].shape[0] // self.batchSize
-            self.num_test_batch = h5f['test_img'][:].shape[0] // self.batchSize
+            # TODO: cambiare X_train in train_img e tutti gli altri. Da cambiare anche in AlexNet\Siamese
+            self.num_train_batch = h5f['X_train'][:].shape[0] // self.batchSize
+            self.num_val_batch = h5f['X_val'][:].shape[0] // self.batchSize
+            self.num_test_batch = h5f['X_test'][:].shape[0] // self.batchSize
 
         self.batchIndexTrain = 0
         self.batchIndexVal = 0
@@ -109,7 +110,7 @@ class CropsGenerator:
 
         for num_image in range(self.batchSize):
             # really transform each image in its crops
-            perm_index = random_permutations_indexes[num_image]
+            perm_index = int(random_permutations_indexes[num_image])
             # y[num_image] will be equal to perm_index. We keep this way
             tiles, y[num_image] = self.create_croppings(x[num_image], perm_index)
             for position_in_crop in range(self.numCrops):
@@ -133,20 +134,21 @@ class CropsGenerator:
         """
         h5f_label = None
         batch_index = -2
+        # TODO: cambiare X_train in train_img e tutti gli altri
         if mode == 'train':
-            h5f_label = 'train_img'
+            h5f_label = 'X_train'
             batch_index = self.batchIndexTrain
             self.batchIndexTrain += 1
             if self.batchIndexTrain == self.num_train_batch:
                 self.batchIndexTrain = 0
         elif mode == 'val':
-            h5f_label = 'val_img'
+            h5f_label = 'X_val'
             batch_index = self.batchIndexVal
             self.batchIndexVal += 1
             if self.batchIndexVal == self.num_val_batch:
                 self.batchIndexVal = 0
         elif mode == 'test':
-            h5f_label = 'test_img'
+            h5f_label = 'X_test'
             batch_index = self.batchIndexTest
             self.batchIndexTest += 1
             if self.batchIndexTest == self.num_test_batch:

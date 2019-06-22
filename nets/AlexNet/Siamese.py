@@ -77,7 +77,8 @@ class Siamese_AlexNet(object):
             with tf.name_scope('Learning_rate_decay'):
                 global_step = tf.get_variable('global_step', [], initializer=tf.constant_initializer(0),
                                               trainable=False)
-                steps_per_epoch = self.conf.num_tr // self.conf.batchSize
+                steps_per_epoch = self.conf.N // self.conf.batchSize
+                # steps_per_epoch = self.data_reader.num_train_batch
                 learning_rate = tf.train.exponential_decay(self.conf.init_lr,
                                                            global_step,
                                                            steps_per_epoch,
@@ -149,7 +150,7 @@ class Siamese_AlexNet(object):
         self.is_train = False
         self.sess.run(tf.local_variables_initializer())
         for step in range(self.data_reader.num_val_batch):
-            x_val, y_val = self.data_reader.generate(mode='valid')
+            x_val, y_val = self.data_reader.generate(mode='val')
             feed_dict = {self.x: x_val, self.y: y_val, self.keep_prob: 1}
             self.sess.run([self.mean_loss_op, self.mean_accuracy_op], feed_dict=feed_dict)
 

@@ -60,13 +60,13 @@ flags.DEFINE_integer('VAL_FREQ', 1000, 'Number of step to evaluate the network o
 
 # Hyper-parameters
 flags.DEFINE_integer('batchSize', 2, 'training batch size')
-# flags.DEFINE_integer('val_batch_size', 2, 'validation batch size')
+flags.DEFINE_integer('val_batch_size', 2, 'validation batch size')
 flags.DEFINE_float('init_lr', 1e-3, 'Initial learning rate')
 flags.DEFINE_float('lr_min', 1e-5, 'Minimum learning rate')
 
 # data
-flags.DEFINE_integer('N', 86380, 'Total number of training examples')
-flags.DEFINE_string('data_path', './prepare_data/COCO_2017_unlabeled.h5', 'Data path')
+flags.DEFINE_integer('N', 14379, 'Total number of training examples')
+flags.DEFINE_string('data_path', 'Dataset/resources/h5_files/dataset.h5', 'Data path')
 flags.DEFINE_boolean('data_augment', True, 'Adds augmentation to data')
 flags.DEFINE_integer('max_angle', 40, 'Maximum rotation angle along each axis; when applying augmentation')
 flags.DEFINE_integer('height', 64, 'Input height size')
