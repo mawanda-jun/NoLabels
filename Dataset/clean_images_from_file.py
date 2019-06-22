@@ -30,7 +30,7 @@ def find_unopenable(path_to_folder):
             try:
                 # print(file)
                 img = Image.open(os.path.join(root, file))
-                if img.height < 255 or img.width < 255:
+                if img.height < 255 or img.width < 255 or img.mode is not 'RGB':
                     too_little.add(os.path.join(root, file + '\n'))
             except Exception as e:
                 errors.add(str(e) + '\n')
@@ -66,4 +66,4 @@ if __name__ == '__main__':
     dirpath = os.path.join('resources', 'images')
     # rename_images(dirpath)
     find_unopenable(dirpath)
-    delete_images('errors.txt', 'too_little.txt')
+    # delete_images('errors.txt', 'too_little.txt')
