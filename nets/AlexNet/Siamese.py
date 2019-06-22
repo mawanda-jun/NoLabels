@@ -26,6 +26,8 @@ class Siamese_AlexNet(object):
         self.input_shape = [None, conf.tileSize, conf.tileSize, conf.numChannels, conf.numCrops]
         self.is_train = tf.Variable(True, trainable=False, dtype=tf.bool)
         self.x, self.y, self.keep_prob = self.create_placeholders()
+        self.valid_loss = 0
+        self.valid_acc = 0
         self.inference()
         self.configure_network()
 
@@ -100,10 +102,12 @@ class Siamese_AlexNet(object):
 
     def configure_summary(self):
         # recon_img = tf.reshape(self.decoder_output, shape=(-1, self.conf.height, self.conf.width, self.conf.channel))
-        summary_list = [tf.summary.scalar('Loss/total_loss', self.mean_loss),
+        summary_list = [tf.summary.scalar('Loss/total_train_loss', self.mean_loss),
+                        tf.summary.scalar('Loss/valid_loss', self.valid_loss),
                         # tf.summary.image('original', self.x),
                         # tf.summary.image('reconstructed', recon_img),
-                        tf.summary.scalar('Accuracy/average_accuracy', self.mean_accuracy)]
+                        tf.summary.scalar('Accuracy/train_accuracy', self.mean_accuracy),
+                        tf.summary.scalar('Accuracy/valid_accuracy', self.valid_acc)]
         self.merged_summary = tf.summary.merge(summary_list)
 
     def save_summary(self, summary, step, mode):
