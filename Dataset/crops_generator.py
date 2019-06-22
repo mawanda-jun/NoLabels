@@ -4,6 +4,16 @@ import random
 import tensorflow as tf
 
 
+class H5Generator:
+    def __init__(self, file):
+        self.file = file
+
+    def __call__(self, mode, *args, **kwargs):
+        with h5py.File(self.file, 'r') as hf:
+            for im in hf[mode]:
+                yield im
+
+
 class CropsGenerator:
     """
     Read HD5F file, one batch at a time, and serve a jigsaw puzzle.
@@ -24,9 +34,12 @@ class CropsGenerator:
 
         with h5py.File(self.data_path, 'r') as h5f:
             # TODO: cambiare X_train in train_img e tutti gli altri. Da cambiare anche in AlexNet\Siamese
-            self.num_train_batch = h5f['X_train'][:].shape[0] // self.batchSize
-            self.num_val_batch = h5f['X_val'][:].shape[0] // self.batchSize
-            self.num_test_batch = h5f['X_test'][:].shape[0] // self.batchSize
+            self.num_train = h5f['X_train'][:].shape[0]
+            self.num_train_batch = self.num_train // self.batchSize
+            self.num_val = h5f['X_val'][:].shape[0]
+            self.num_val_batch = self.num_val // self.batchSize
+            self.num_test = h5f['X_test'][:].shape[0]
+            self.num_test_batch = self.num_test // self.batchSize
 
         self.batchIndexTrain = 0
         self.batchIndexVal = 0
@@ -70,14 +83,31 @@ class CropsGenerator:
             crop_x, crop_y = 0, 0
 
         final_crops = np.zeros((self.tileSize, self.tileSize, self.numChannels, self.numCrops), dtype=np.float32)  # array with crops
+        # final_crops = tf.Variable(final_crops)
         crops_per_side = int(np.sqrt(self.numCrops))  # 9 crops -> 3 crops per side
+        # x_cuts, y_cuts = [], []
         for row in range(crops_per_side):
             for col in range(crops_per_side):
                 x_start = crop_x + col * self.cellSize + random.randrange(self.cellSize - self.tileSize)
                 y_start = crop_y + row * self.cellSize + random.randrange(self.cellSize - self.tileSize)
-                # Put the crop in the list of pieces randomly according to the number picked from max_hamming_set
                 final_crops[:, :, :, self.maxHammingSet[perm_index, row * crops_per_side + col]] = \
                     image[y_start:y_start + self.tileSize, x_start:x_start + self.tileSize, :]
+        #         PROBABILMENTE NON FUNZIONA PERCHE' SI CERCA DI TAGLIARE UN TENSORE E DI ASSEGNARLO AD UN NUMPY ARRAY
+        #         x_cuts.append([x_start, row, col])
+        #
+        #         y_cuts.append([y_start, row, col])
+        #         # Put the crop in the list of pieces randomly according to the number picked from max_hamming_set
+        #
+        # img_stacked = []
+        # for i in range(self.numCrops):
+        #     row = x_cuts[1]
+        #     col = x_cuts[2]
+        #     img_stacked.append({'image': tf.image.crop_to_bounding_box(image, x_cuts[i][0], y_cuts[i][0], self.tileSize, self.tileSize),
+        #                         'perm': self.maxHammingSet[perm_index, row * crops_per_side + col]}
+        #                        )
+        # img_stacked = sorted(img_stacked, key=lambda x: x['perm'])
+        # final_crops = tf.stack(img_stacked, axis=0)
+
         return final_crops, perm_index
 
     def __batch_generation_normalized(self, x: np.array):
@@ -117,6 +147,47 @@ class CropsGenerator:
                 X[position_in_crop][num_image, :, :, :] = tiles[:, :, :, position_in_crop]
 
         return X, y
+
+    def __image_generation_normalized(self, x: tf.Tensor, perm_index: int):
+        """
+        Normalize data and produce whole dataset cropped
+        :param x: is an image
+        :param perm_index: index of permutation
+        :return:
+        """
+        # modify each image individually
+        x = tf.subtract(x, self.meanTensor)
+        x = tf.divide(x, self.stdTensor)
+        # defining "labels" for every image of batch
+        # y = np.empty(self.num_train)
+        # create <numCrops> long array for every tile of one image
+        tile = np.empty((self.tileSize, self.tileSize, self.numChannels), np.float32)
+        X = np.array([tile for _ in range(self.numCrops)])
+        X = tf.convert_to_tensor(X, tf.float32)
+
+        # create array with random indexes form max_hamming_set. We do this way to have always different permutations
+        # per batch
+        # random_permutations_indexes = np.zeros(self.batchSize)
+        # random_permutations_indexes[0] = random.randrange(self.numClasses)
+        # i = 1
+        # while i < self.batchSize:
+        #     tmp = random.randrange(self.numClasses)
+        #     if tmp not in random_permutations_indexes:
+        #         random_permutations_indexes[i] = tmp
+        #         i += 1
+        #
+        # assert len(random_permutations_indexes) == self.batchSize
+
+        tiles, y = self.create_croppings(x, perm_index)
+
+        for position_in_crop in range(self.numCrops):
+            X[position_in_crop][None, :, :, :] = tiles[position_in_crop]
+        # for num_image in range(self.batchSize):
+            # really transform each image in its crops
+            # perm_index = int(random_permutations_indexes[num_image])
+            # y[num_image] will be equal to perm_index. We keep this way
+
+        return X, self.one_hot(self.maxHammingSet[y])
 
     def one_hot(self, y):
         """
@@ -160,16 +231,59 @@ class CropsGenerator:
             x = np.expand_dims(x, axis=-1)
         X, y = self.__batch_generation_normalized(x.astype(np.float32))
         return np.transpose(np.array(X), axes=[1, 2, 3, 4, 0]), self.one_hot(y)
-        # return np.transpose(np.array(X), axes=[1, 2, 3, 4, 0]), tf.one_hot(y, self.numClasses)
+
+    def generateTF(self, mode='train'):
+        """
+        Generates batch and serve always new one
+        :param mode:
+        :return:
+        """
+        h5f_label = None
+        # batch_index = -2
+        # TODO: cambiare X_train in train_img e tutti gli altri
+        if mode == 'train':
+            h5f_label = 'X_train'
+            # batch_index = self.batchIndexTrain
+            # self.batchIndexTrain += 1
+            # if self.batchIndexTrain == self.num_train_batch:
+            #     self.batchIndexTrain = 0
+        elif mode == 'val':
+            h5f_label = 'X_val'
+            # batch_index = self.batchIndexVal
+            # self.batchIndexVal += 1
+            # if self.batchIndexVal == self.num_val_batch:
+            #     self.batchIndexVal = 0
+        elif mode == 'test':
+            h5f_label = 'X_test'
+            # batch_index = self.batchIndexTest
+            # self.batchIndexTest += 1
+            # if self.batchIndexTest == self.num_test_batch:
+            #     self.batchIndexTest = 0
+        parse_fn = lambda img: self.__image_generation_normalized(img, random.randrange(self.numClasses))
+        dataset = (tf.data.Dataset.from_generator(H5Generator(h5f_label), tf.float32, tf.TensorShape([256, 256, 3]))
+                   .map(parse_fn)
+                   .batch(self.batchSize)
+                   .prefetch(1)
+                   )
+        iterator = dataset.make_initializable_iterator()
+        
+        return iterator
+        # with h5py.File(self.data_path, 'r') as h5f:
+        #     x = h5f[h5f_label][batch_index * self.batchSize:(batch_index + 1) * self.batchSize, ...]
+        # if self.numChannels == 1:
+        #     x = np.expand_dims(x, axis=-1)
+        # X, y = self.__whole_generation_normalized(x.astype(np.float32), mode)
+        # return np.transpose(np.array(X), axes=[1, 2, 3, 4, 0]), self.one_hot(y)
+
 
     def randomize(self):
         """ Randomizes the order of data samples"""
         with h5py.File(self.data_path, 'a') as h5f:
-            train_img = h5f['train_img'][:].astype(np.float32)
+            train_img = h5f['X_train'][:].astype(np.float32)
             permutation = np.random.permutation(train_img.shape[0])
             train_img = train_img[permutation, :, :, :]
-            del h5f['train_img']
-            h5f.create_dataset('train_img', data=train_img)
+            del h5f['X_train']
+            h5f.create_dataset('X_train', data=train_img)
 
     def color_channel_jitter(self, image):
         """

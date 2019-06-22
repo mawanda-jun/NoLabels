@@ -127,23 +127,28 @@ class Siamese_AlexNet(object):
             print('*' * 50)
             print('----> Start Training')
             print('*' * 50)
+        iterator = self.data_reader.generateTF(mode='train')
+        iterator_op = iterator.initializer
+
         for epoch in range(1, self.conf.max_epoch):
             # self.data_reader.randomize()
+            self.sess.run(iterator_op)
             self.is_train = True
-            for train_step in range(self.data_reader.num_train_batch):
-                x_batch, y_batch = self.data_reader.generate(mode='train')
-                feed_dict = {self.x: x_batch, self.y: y_batch, self.keep_prob: 0.5}
-                if train_step % self.conf.SUMMARY_FREQ == 0:
-                    _, _, _, summary = self.sess.run([self.train_op,
-                                                      self.mean_loss_op,
-                                                      self.mean_accuracy_op,
-                                                      self.merged_summary], feed_dict=feed_dict)
-                    loss, acc = self.sess.run([self.mean_loss, self.mean_accuracy])
-                    global_step = (epoch-1) * self.data_reader.num_train_batch + train_step
-                    self.save_summary(summary, global_step, mode='train')
-                    print('step: {0:<6}, train_loss= {1:.4f}, train_acc={2:.01%}'.format(train_step, loss, acc))
-                else:
-                    self.sess.run([self.train_op, self.mean_loss_op, self.mean_accuracy_op], feed_dict=feed_dict)
+            train_step = -1
+            # for train_step in range(self.data_reader.num_train_batch):
+                # x_batch, y_batch = self.data_reader.generate(mode='train')
+                # feed_dict = {self.x: x_batch, self.y: y_batch, self.keep_prob: 0.5}
+            if train_step % self.conf.SUMMARY_FREQ == 0:
+                _, _, train_step, summary = self.sess.run([self.train_op,
+                                                  self.mean_loss_op,
+                                                  self.mean_accuracy_op,
+                                                  self.merged_summary])
+                loss, acc = self.sess.run([self.mean_loss, self.mean_accuracy])
+                global_step = (epoch-1) * self.data_reader.num_train_batch + train_step
+                self.save_summary(summary, global_step, mode='train')
+                print('step: {0:<6}, train_loss= {1:.4f}, train_acc={2:.01%}'.format(train_step, loss, acc))
+            else:
+                self.sess.run([self.train_op, self.mean_loss_op, self.mean_accuracy_op])
             self.evaluate(epoch)
 
     def evaluate(self, epoch):
@@ -155,17 +160,17 @@ class Siamese_AlexNet(object):
             self.sess.run([self.mean_loss_op, self.mean_accuracy_op], feed_dict=feed_dict)
 
         summary_valid = self.sess.run(self.merged_summary, feed_dict=feed_dict)
-        valid_loss, valid_acc = self.sess.run([self.mean_loss, self.mean_accuracy])
+        self.valid_loss, self.valid_acc = self.sess.run([self.mean_loss, self.mean_accuracy])
         self.save_summary(summary_valid, epoch * self.data_reader.num_train_batch, mode='valid')
-        if valid_acc > self.best_validation_accuracy:
-            self.best_validation_accuracy = valid_acc
+        if self.valid_acc > self.best_validation_accuracy:
+            self.best_validation_accuracy = self.valid_acc
             self.save(epoch)
             improved_str = '(improved)'
         else:
             improved_str = ''
         print('-' * 20 + 'Validation' + '-' * 20)
         print('After {0} epoch: val_loss= {1:.4f}, val_acc={2:.01%} {3}'.
-              format(epoch, valid_loss, valid_acc, improved_str))
+              format(epoch, self.valid_loss, self.valid_acc, improved_str))
         print('-' * 50)
 
     def test(self, epoch_num):
