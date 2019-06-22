@@ -1,5 +1,6 @@
 import os
 from PIL import Image
+from tqdm import tqdm
 
 
 def rename_images(folder_path):
@@ -25,12 +26,13 @@ def find_unopenable(path_to_folder):
     errors = set([])
     too_little = set([])
     for root, dirs, files in os.walk(path_to_folder):
-        for file in files:
+        for file in tqdm(files, desc='Finding unopenable images'):
             try:
+                # print(file)
                 img = Image.open(os.path.join(root, file))
-                if img.shape[0] < 255 or img.shape[1] < 255:
-                    too_little.add(os.path.join(root, file))
-            except OSError as e:
+                if img.height < 255 or img.width < 255:
+                    too_little.add(os.path.join(root, file + '\n'))
+            except Exception as e:
                 errors.add(str(e) + '\n')
     with open('errors.txt', 'w') as f:
         f.writelines(errors)
@@ -46,7 +48,7 @@ def delete_images(errors_filename, too_little_filename):
     """
     with open(errors_filename, 'r') as f:
         lines = f.readlines()
-        for line in lines:
+        for line in tqdm(lines, desc="Deleting error images"):
             newline = line.split(' ')[4]
             newline = newline.replace("'", "")
             newline = newline.replace('\\\\', "\\")
@@ -55,13 +57,13 @@ def delete_images(errors_filename, too_little_filename):
             if os.path.isfile(path):
                 os.remove(path)
     with open(too_little_filename, 'r') as f:
-        for line in f.readlines():
-            if os.path.isfile(os.path.join(line)):
-                os.remove(os.path.join(line))
+        for line in tqdm(f.readlines(), desc="Deleting too little images"):
+            # if os.path.isfile(line.replace('resources/', '')):
+            os.remove(os.path.join(line.replace('resources\'', '').replace('\n', '').replace('\\', '/')))
 
 
 if __name__ == '__main__':
     dirpath = os.path.join('resources', 'images')
-    rename_images(dirpath)
+    # rename_images(dirpath)
     find_unopenable(dirpath)
-    # delete_images('errors.txt', 'too_little.txt')
+    delete_images('errors.txt', 'too_little.txt')
