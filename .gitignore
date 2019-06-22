@@ -1,6 +1,7 @@
 .idea
 Dataset/resources/*
 Results
+Results1
 
 # Created by https://www.gitignore.io/api/latex,python,pycharm,visualstudiocode
 # Edit at https://www.gitignore.io/?templates=latex,python,pycharm,visualstudiocode
