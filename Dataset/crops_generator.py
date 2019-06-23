@@ -24,9 +24,9 @@ class CropsGenerator:
 
         with h5py.File(self.data_path, 'r') as h5f:
             # TODO: cambiare X_train in train_img e tutti gli altri. Da cambiare anche in AlexNet\Siamese
-            self.num_train_batch = h5f['X_train'][:].shape[0] // self.batchSize
-            self.num_val_batch = h5f['X_val'][:].shape[0] // self.batchSize
-            self.num_test_batch = h5f['X_test'][:].shape[0] // self.batchSize
+            self.num_train_batch = h5f['train_img'][:].shape[0] // self.batchSize
+            self.num_val_batch = h5f['val_img'][:].shape[0] // self.batchSize
+            self.num_test_batch = h5f['test_img'][:].shape[0] // self.batchSize
 
         self.batchIndexTrain = 0
         self.batchIndexVal = 0
@@ -136,19 +136,19 @@ class CropsGenerator:
         batch_index = -2
         # TODO: cambiare X_train in train_img e tutti gli altri
         if mode == 'train':
-            h5f_label = 'X_train'
+            h5f_label = 'train_img'
             batch_index = self.batchIndexTrain
             self.batchIndexTrain += 1
             if self.batchIndexTrain == self.num_train_batch:
                 self.batchIndexTrain = 0
         elif mode == 'val':
-            h5f_label = 'X_val'
+            h5f_label = 'val_img'
             batch_index = self.batchIndexVal
             self.batchIndexVal += 1
             if self.batchIndexVal == self.num_val_batch:
                 self.batchIndexVal = 0
         elif mode == 'test':
-            h5f_label = 'X_test'
+            h5f_label = 'test_img'
             batch_index = self.batchIndexTest
             self.batchIndexTest += 1
             if self.batchIndexTest == self.num_test_batch:

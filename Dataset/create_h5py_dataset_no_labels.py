@@ -81,7 +81,7 @@ class ThreadedH5pyFile(threading.Thread):
                         self.training_mean_old = None
                         self.training_variance = None
                     # write images inside h5 file
-                    self.hdf5_out['X_' + self.set_type][i, ...] = np_img
+                    self.hdf5_out[self.set_type + '_img'][i, ...] = np_img
             except OSError as e:
                 self.read_errors.add(str(e) + '\n')
                 continue
@@ -96,13 +96,13 @@ def images_in_paths(folder_path: str) -> List[str]:
     """
     paths = []
     folder_path = os.path.join(os.getcwd(), folder_path)
-    extensions = set([])
+    # extensions = set([])
     for root, dirs, files in os.walk(folder_path):
         for file in files:
-            extensions.add(os.path.splitext(file)[1])
+            # extensions.add(os.path.splitext(file)[1])
             paths.append(os.path.join(root, file))
-    with open('extensions.txt', 'w') as f:
-        f.writelines([extension + '\n' for extension in extensions])
+    # with open('extensions.txt', 'w') as f:
+    #     f.writelines([extension + '\n' for extension in extensions])
     return paths
 
 
@@ -118,7 +118,7 @@ def shuffle_dataset(lst: List, seed: int = None) -> None:
     random.shuffle(lst)
 
 
-def generate_h5py(file_list: List, img_size=256, hdf5_file_name: str = 'data', train_dim: float = 0.65, val_dim: float = 0.25, folder: str='h5_files'):
+def generate_h5py(file_list: List, img_size=256, hdf5_file_name: str = 'data', train_dim: float = 0.70, val_dim: float = 0.25, folder: str='h5_files'):
     """
     Generate and save train, validation and test data. Test data is what is left from train and validation sets
     :param file_list:
@@ -147,9 +147,9 @@ def generate_h5py(file_list: List, img_size=256, hdf5_file_name: str = 'data', t
     # according to the labels of labels_dict
     os.makedirs(folder, exist_ok=True)
     with h5py.File(os.path.join(os.getcwd(), folder, hdf5_file_name), mode='w') as hdf5_out:
-        hdf5_out.create_dataset('X_train', (len(file_dict['train']), img_size, img_size, 3), np.uint8)
-        hdf5_out.create_dataset('X_val', (len(file_dict['val']), img_size, img_size, 3), np.uint8)
-        hdf5_out.create_dataset('X_test', (len(file_dict['test']), img_size, img_size, 3), np.uint8)
+        hdf5_out.create_dataset('train_img', (len(file_dict['train']), img_size, img_size, 3), np.uint8)
+        hdf5_out.create_dataset('val_img', (len(file_dict['val']), img_size, img_size, 3), np.uint8)
+        hdf5_out.create_dataset('test_img', (len(file_dict['test']), img_size, img_size, 3), np.uint8)
         hdf5_out.create_dataset('train_mean', (img_size, img_size, 3), np.float32)
         hdf5_out.create_dataset('train_std', (img_size, img_size, 3), np.float32)
 
@@ -177,7 +177,10 @@ def generate_h5py(file_list: List, img_size=256, hdf5_file_name: str = 'data', t
 
 
 if __name__ == '__main__':
-    res_path = os.path.join(os.getcwd(), 'resources')
-
-    images_list = images_in_paths(os.path.join(res_path, 'images'))
-    generate_h5py(images_list, 256, 'dataset.h5', folder=os.path.join(res_path, 'h5_files'))
+    output_path = os.path.join(os.getcwd(), 'resources')
+    elements = int(2e5)
+    res_path = os.path.join('C:\\Users\\giova\\Desktop\\ILSVRC\\Data\\CLS-LOC')
+    images_list = images_in_paths(os.path.join(res_path))
+    random.shuffle(images_list)
+    images_list = images_list[0:elements]
+    generate_h5py(images_list, 256, 'ILSVRC_2e5.h5', folder=os.path.join(output_path, 'h5_files'))

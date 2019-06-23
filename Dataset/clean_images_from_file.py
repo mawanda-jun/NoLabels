@@ -1,6 +1,36 @@
 import os
 from PIL import Image
 from tqdm import tqdm
+import threading
+
+
+def chunks(l: list, n: int):
+    """
+    Divide a list into n equal parts
+    :param l: list
+    :param n: number of chunks
+    :return: list of list of the original
+    """
+    k, m = divmod(len(l), n)
+    return (l[i * k + min(i, m):(i + 1) * k + min(i + 1, m)] for i in range(n))
+
+
+class ThreadIt(threading.Thread):
+    def __init__(self, filepaths, mode='too_little'):
+        threading.Thread.__init__(self)
+        self.filepaths = filepaths
+        self.mode = mode
+
+    def run(self):
+        if self.mode == 'too_little':
+            for line in tqdm(self.filepaths, desc="Deleting error images"):
+                # newline = line.split(' ')[4]
+                # newline = newline.replace("'", "")
+                # newline = newline.replace('\\\\', "\\")
+                line = line.replace('\n', '').replace('\'', '/')
+                path = os.path.join(line)
+                if os.path.isfile(path):
+                    os.remove(path)
 
 
 def rename_images(folder_path):
@@ -30,7 +60,7 @@ def find_unopenable(path_to_folder):
             try:
                 # print(file)
                 img = Image.open(os.path.join(root, file))
-                if img.height < 255 or img.width < 255 or img.mode is not 'RGB':
+                if img.height < 256 or img.width < 256 or img.mode is not 'RGB':
                     too_little.add(os.path.join(root, file + '\n'))
             except Exception as e:
                 errors.add(str(e) + '\n')
@@ -63,7 +93,8 @@ def delete_images(errors_filename, too_little_filename):
 
 
 if __name__ == '__main__':
-    dirpath = os.path.join('resources', 'images')
+    # dirpath = os.path.join('resources', 'images')
+    dirpath = os.path.join('C:\\Users\\giova\\Desktop\\ILSVRC\\Data\\CLS-LOC')
     # rename_images(dirpath)
     find_unopenable(dirpath)
     # delete_images('errors.txt', 'too_little.txt')
