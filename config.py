@@ -82,7 +82,7 @@ flags.DEFINE_string('logdir', './Results/log_dir/', 'Logs directory')
 flags.DEFINE_string('modeldir', './Results/model_dir/', 'Saved models directory')
 flags.DEFINE_string('savedir', './Results/result/', 'Results saving directory')
 flags.DEFINE_string('model_name', 'model', 'Model file name')
-flags.DEFINE_integer('reload_step', 0, 'Reload step to continue training')
+flags.DEFINE_integer('reload_step', 5, 'Reload step to continue training')
 
 # args = tf.app.flags.FLAGS
 args = tf.flags.FLAGS
