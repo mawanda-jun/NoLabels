@@ -13,7 +13,7 @@ from loss_ops import cross_entropy_loss
 from ops import *
 from AlexNet import AlexNet
 import numpy as np
-from Dataset.crops_generator import CropsGenerator
+from Dataset.crops_generator_TF import CropsGenerator
 import os
 
 
@@ -24,6 +24,9 @@ class Siamese_AlexNet(object):
         self.conf = conf
         self.HammingSet = hamming_set
         self.input_shape = [None, conf.tileSize, conf.tileSize, conf.numChannels, conf.numCrops]
+        self.data_reader = CropsGenerator(self.conf, self.HammingSet)
+        self.train_set = self.data_reader.generate(mode='train')
+        self.val_set = self.data_reader.generate(mode='val')
         self.is_train = tf.Variable(True, trainable=False, dtype=tf.bool)
         self.x, self.y, self.keep_prob = self.create_placeholders()
         self.valid_loss = 0
@@ -38,7 +41,7 @@ class Siamese_AlexNet(object):
             self.iter = self.data_reader.generate('train').make_one_shot_iterator()
             x, y = self.iter.get_next()
             # placeholder for keep probability in dropout layers
-            keep_prob = tf.placeholder(tf.float32)
+            keep_prob = tf.placeholder(tf.float32, name='keep_prob')
         return x, y, keep_prob
 
     def inference(self):
@@ -148,8 +151,8 @@ class Siamese_AlexNet(object):
                 loss, acc = self.sess.run([self.mean_loss, self.mean_accuracy], feed_dict={self.keep_prob: self.conf.keep_prob})
                 self.save_summary(summary, epoch, mode='train')
                 print('epoch: {0:<6}, train_loss= {1:.4f}, train_acc={2:.01%}'.format(epoch, loss, acc))
-            elif epoch % self.conf.VAL_FREQ == 0:
-                self.evaluate(epoch)
+                if epoch % self.conf.VAL_FREQ == 0:
+                    self.evaluate(epoch)
             else:
                 _, _, _ = self.sess.run([self.train_op, self.mean_loss_op, self.mean_accuracy_op], feed_dict={self.keep_prob: self.conf.keep_prob})
 
@@ -159,8 +162,8 @@ class Siamese_AlexNet(object):
         # as in train method
         self.iter = tf.data.Iterator.from_structure(self.val_set.output_types, self.val_set.output_shapes)
         val_init_op = self.iter.make_initializer(self.val_set)
-        self.sess.run(val_init_op, feed_dict={self.keep_prob: self.conf.keep_prob})
-        self.sess.run([val_init_op, self.mean_loss_op, self.mean_accuracy_op], feed_dict={self.keep_prob: self.conf.keep_prob})
+        self.sess.run(val_init_op)
+        self.sess.run([self.mean_loss_op, self.mean_accuracy_op], feed_dict={self.keep_prob: self.conf.keep_prob})
 
         summary_valid = self.sess.run(self.merged_summary)
         valid_loss, valid_acc = self.sess.run([self.mean_loss, self.mean_accuracy],  feed_dict={self.keep_prob: self.conf.keep_prob})
