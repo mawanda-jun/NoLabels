@@ -128,22 +128,22 @@ class Siamese_AlexNet(object):
             print('----> Start Training')
             print('*' * 50)
         iterator = self.data_reader.generateTF(mode='train')
-        iterator_op = iterator.initializer
-
+        # iterator_op = iterator.initializer
+        # features, labels = iterator.get_next()
+        self.sess.run(iterator.initializer)
         for epoch in range(1, self.conf.max_epoch):
             # self.data_reader.randomize()
-            # self.sess.run(iterator_op)
+            # self.sess.run([features, labels])
+            x_batch, y_batch = iterator.get_next()
+            feed_dict = {self.x: x_batch.eval(session=self.sess), self.y: y_batch.eval(session=self.sess), self.keep_prob: 0.5}
             self.is_train = True
             train_step = -1
             # for train_step in range(self.data_reader.num_train_batch):
-                # x_batch, y_batch = self.data_reader.generate(mode='train')
-                # feed_dict = {self.x: x_batch, self.y: y_batch, self.keep_prob: 0.5}
             if train_step % self.conf.SUMMARY_FREQ == 0:
-                train_step, _, _, summary = self.sess.run([iterator_op,
-                                                           self.train_op,
+                train_step, _, _, summary = self.sess.run([self.train_op,
                                                            self.mean_loss_op,
                                                            self.mean_accuracy_op,
-                                                           self.merged_summary])
+                                                           self.merged_summary], feed_dict=feed_dict)
                 loss, acc = self.sess.run([self.mean_loss, self.mean_accuracy])
                 global_step = (epoch-1) * self.data_reader.num_train_batch + train_step
                 self.save_summary(summary, global_step, mode='train')
