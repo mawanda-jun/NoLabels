@@ -203,6 +203,14 @@ class CropsGenerator:
         """
         return np.array([[1 if y[i] == j else 0 for j in range(self.numClasses)] for i in range(y.shape[0])])
 
+    def one_hot_single(self, y):
+        """
+        OneHot encoding for labels in y.
+        :param y: labels
+        :return: y in the format of OneHot
+        """
+        return np.array([[1 if y[i] == j else 0 for j in range(self.numClasses)] for i in range(y.shape[0])])
+
     def generate(self, mode='train'):
         """
         Generates batch and serve always new one
@@ -312,14 +320,14 @@ class CropsGenerator:
         with h5py.File(self.data_path, 'r') as h5f:
             x = h5f[h5f_label]
             for el in x:
-                yield self.__image_generation_normalized(el.astype(np.float32))
+                yield self.__image_generation_normalized(el[...].astype(np.float32))
 
     def generateTF(self, mode='train'):
         dataset = (tf.data.Dataset.from_generator(
             lambda: self.asd(mode),
             (tf.float32, tf.float32),
-            (tf.TensorShape([None, self.tileSize, self.tileSize, self.numChannels, self.numCrops]),
-             tf.TensorShape([None, self.conf.hammingSetSize])))
+            (tf.TensorShape([self.tileSize, self.tileSize, self.numChannels, self.numCrops]),
+             tf.TensorShape([self.conf.hammingSetSize])))
                        .batch(self.batchSize)
                        .prefetch(1)
                        )
