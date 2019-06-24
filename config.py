@@ -66,7 +66,7 @@ flags.DEFINE_float('lr_min', 1e-5, 'Minimum learning rate')
 
 # data
 flags.DEFINE_integer('N', 14379, 'Total number of training examples')
-flags.DEFINE_string('data_path', 'Dataset/resources/h5_files/dataset.h5', 'Data path')
+flags.DEFINE_string('data_path', 'Dataset/resources/h5_files/ILSVRC_2e5.h5', 'Data path')
 flags.DEFINE_boolean('data_augment', True, 'Adds augmentation to data')
 flags.DEFINE_integer('max_angle', 40, 'Maximum rotation angle along each axis; when applying augmentation')
 flags.DEFINE_integer('height', 64, 'Input height size')
