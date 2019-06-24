@@ -24,9 +24,13 @@ class Siamese_AlexNet(object):
         self.conf = conf
         self.HammingSet = hamming_set
         self.input_shape = [None, conf.tileSize, conf.tileSize, conf.numChannels, conf.numCrops]
+
         self.data_reader = CropsGenerator(self.conf, self.HammingSet)
         self.train_set = self.data_reader.generate(mode='train')
+        self.train_iter = self.train_set.make_initializable_iterator()
         self.val_set = self.data_reader.generate(mode='val')
+        self.val_iter = self.val_set.make_initializable_iterator()
+
         self.is_train = tf.Variable(True, trainable=False, dtype=tf.bool)
         self.x, self.y, self.keep_prob = self.create_placeholders()
         self.valid_loss = 0
@@ -36,10 +40,14 @@ class Siamese_AlexNet(object):
 
     def create_placeholders(self):
         with tf.name_scope('Input'):
-            # create sort of placeholder to feed the net with the iter.get_next() type.
+            # create sort of placeholder to feed the net with a generic type to feed the net with different datasets.
+            self.handle = tf.placeholder(tf.string, shape=[])
+            # create iterator to feed the net with values from "get_next"
             # Before train and evaluation self.iter will change and so will the referring dataset
-            self.iter = self.data_reader.generate('train').make_one_shot_iterator()
-            x, y = self.iter.get_next()
+            self.handle_iter = tf.data.Iterator.from_string_handle(self.handle, self.train_set.output_types, self.train_set.output_shapes)
+            # self.iter = self.data_reader.generate('val', 'buuu').make_one_shot_iterator()
+            # self.iter = tf.data.Iterator.from_structure(self.train_set.output_types, self.train_set.output_shapes)
+            x, y = self.handle_iter.get_next()
             # placeholder for keep probability in dropout layers
             keep_prob = tf.placeholder(tf.float32, name='keep_prob')
         return x, y, keep_prob
@@ -109,9 +117,7 @@ class Siamese_AlexNet(object):
     def configure_summary(self):
         # recon_img = tf.reshape(self.decoder_output, shape=(-1, self.conf.height, self.conf.width, self.conf.channel))
         summary_list = [tf.summary.scalar('Loss/total_train_loss', self.mean_loss),
-                        tf.summary.scalar('Loss/valid_loss', self.valid_loss),
-                        tf.summary.scalar('Accuracy/train_accuracy', self.mean_accuracy),
-                        tf.summary.scalar('Accuracy/valid_accuracy', self.valid_acc)]
+                        tf.summary.scalar('Accuracy/train_accuracy', self.mean_accuracy)]
         self.merged_summary = tf.summary.merge(summary_list)
 
     def save_summary(self, summary, step, mode):
@@ -125,10 +131,19 @@ class Siamese_AlexNet(object):
     def train(self):
         self.sess.run(tf.local_variables_initializer())
         self.best_validation_accuracy = 0
-        # define new iter with the shape of the dataset. It will then be initalized by the train set.
-        # self.x and self.y will be fed in the method "create_placeholder" by iter.get_next method
-        self.iter = tf.data.Iterator.from_structure(self.train_set.output_types, self.train_set.output_shapes)
-        train_init_op = self.iter.make_initializer(self.train_set)
+        # create a string handle to match type of placeholder created before. This train_handle is a iterator over the
+        # dataset, and is "wrapped" inside a string_handle()
+        train_handle = self.sess.run(self.train_iter.string_handle())
+        # initialize iterator for training set. Without this point it is not possible to start reading from dataset
+        train_init_op = self.train_iter.initializer
+        # feed the handle with the train_handle created before. So:
+        # 1. we have created a placeholder handle to prepare the exact input for the net (not numpy arrays but tf.data.Iterators)
+        # 2. we created a tf.data.Dataset object and an iterator (self.train_iter) which can be initialized
+        # 3. inside train method we prepared an handle to match the placeholder we created before. We initialize the
+        #    iterator with self.train_iter.initializer;
+        # 4. we fed the handle and the keep_prob to the model;
+        # 5. we start the session with the initialization of the iterator, then we feed the net with the values it needs
+        feed_dict = {self.handle: train_handle, self.keep_prob: self.conf.keep_prob}
 
         if self.conf.reload_step > 0:
             self.reload(self.conf.reload_step)
@@ -147,26 +162,29 @@ class Siamese_AlexNet(object):
                 _, _, _, summary = self.sess.run([self.train_op,
                                                   self.mean_loss_op,
                                                   self.mean_accuracy_op,
-                                                  self.merged_summary], feed_dict={self.keep_prob: self.conf.keep_prob})
-                loss, acc = self.sess.run([self.mean_loss, self.mean_accuracy], feed_dict={self.keep_prob: self.conf.keep_prob})
+                                                  self.merged_summary], feed_dict=feed_dict)
+                loss, acc = self.sess.run([self.mean_loss, self.mean_accuracy])
                 self.save_summary(summary, epoch, mode='train')
                 print('epoch: {0:<6}, train_loss= {1:.4f}, train_acc={2:.01%}'.format(epoch, loss, acc))
                 if epoch % self.conf.VAL_FREQ == 0:
                     self.evaluate(epoch)
             else:
-                _, _, _ = self.sess.run([self.train_op, self.mean_loss_op, self.mean_accuracy_op], feed_dict={self.keep_prob: self.conf.keep_prob})
+                _, _, _ = self.sess.run([self.train_op, self.mean_loss_op, self.mean_accuracy_op], feed_dict=feed_dict)
 
     def evaluate(self, epoch):
         self.is_train = False
         self.sess.run(tf.local_variables_initializer())
         # as in train method
-        self.iter = tf.data.Iterator.from_structure(self.val_set.output_types, self.val_set.output_shapes)
-        val_init_op = self.iter.make_initializer(self.val_set)
+        val_handle = self.sess.run(self.val_iter.string_handle())
+        val_init_op = self.val_iter.initializer
+        feed_dict = {self.handle: val_handle, self.keep_prob: self.conf.keep_prob}
+        # feed_dict = {self.handle_iter: self.val_iter, self.keep_prob: self.conf.keep_prob}
+        # self.x, self.y = self.iter.get_next()
         self.sess.run(val_init_op)
-        self.sess.run([self.mean_loss_op, self.mean_accuracy_op], feed_dict={self.keep_prob: self.conf.keep_prob})
+        self.sess.run([self.mean_loss_op, self.mean_accuracy_op], feed_dict=feed_dict)
 
-        summary_valid = self.sess.run(self.merged_summary)
-        valid_loss, valid_acc = self.sess.run([self.mean_loss, self.mean_accuracy],  feed_dict={self.keep_prob: self.conf.keep_prob})
+        summary_valid = self.sess.run(self.merged_summary, feed_dict=feed_dict)
+        valid_loss, valid_acc = self.sess.run([self.mean_loss, self.mean_accuracy])
         self.save_summary(summary_valid, epoch, mode='valid')
         if valid_acc > self.best_validation_accuracy:
             self.best_validation_accuracy = valid_acc
