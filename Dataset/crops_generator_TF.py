@@ -150,7 +150,7 @@ class CropsGenerator:
             (tf.TensorShape([self.tileSize, self.tileSize, self.numChannels, self.numCrops]),
              tf.TensorShape([self.conf.hammingSetSize])))
                    .batch(self.batchSize)
-                   .shuffle(self.img_generator.h5f[mode+'_img'].shape[0])
+                   # .shuffle(self.img_generator.h5f[mode+'_img'].shape[0])
                    .prefetch(1)
                    )
         return dataset
