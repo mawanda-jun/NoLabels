@@ -5,13 +5,26 @@ import tensorflow as tf
 
 
 class H5Generator:
-    def __init__(self, file):
-        self.file = file
+    """
+    This is a generator of the file. We don't have to open it every time: we just open it once and then call it
+    with exact parameters. In addition I've created a "prefetch" function, so the function takes care to pre-load the
+    dataset and keep the training more smooth.
+    """
 
-    def __call__(self, mode, *args, **kwargs):
-        with h5py.File(self.file, 'r') as hf:
-            for im in hf[mode]:
-                yield im
+    def __init__(self, file):
+        """
+        Open file once. The object CropsGenerator is kept alive for all the training (and evaluation). So the file will
+        remain opened for the whole time.
+        :param file:
+        """
+        self.h5f = h5py.File(file, 'r')  # it will be closed when the context will be terminated
+        # self.file = file
+        # self.next = None
+
+    def __call__(self, mode, batch_size, index, *args, **kwargs):
+        start = index * batch_size
+        end = (index + 1) * batch_size
+        return self.h5f[mode][start:end, ...]
 
 
 class CropsGenerator:
@@ -20,6 +33,7 @@ class CropsGenerator:
     """
     def __init__(self, conf, max_hamming_set):
         self.data_path = conf.data_path  # path to hd5f file
+        self.img_generator = H5Generator(self.data_path)
         self.numChannels = conf.numChannels  # num of input image channels
         self.numCrops = conf.numCrops  # num of jigsaw crops
         self.cropSize = conf.cropSize  # size of crop (255)
@@ -33,14 +47,10 @@ class CropsGenerator:
         self.conf = conf
         self.numClasses = self.maxHammingSet.shape[0]  # number of different jigsaw classes
 
-        with h5py.File(self.data_path, 'r') as h5f:
-            # TODO: cambiare X_train in train_img e tutti gli altri. Da cambiare anche in AlexNet\Siamese
-            self.num_train = h5f['train_img'][:].shape[0]
-            self.num_train_batch = self.num_train // self.batchSize
-            self.num_val = h5f['val_img'][:].shape[0]
-            self.num_val_batch = self.num_val // self.batchSize
-            self.num_test = h5f['test_img'][:].shape[0]
-            self.num_test_batch = self.num_test // self.batchSize
+        # with h5py.File(self.data_path, 'r') as h5f:
+        self.num_train_batch = self.img_generator.h5f['train_img'][:].shape[0] // self.batchSize
+        self.num_val_batch = self.img_generator.h5f['val_img'][:].shape[0] // self.batchSize
+        self.num_test_batch = self.img_generator.h5f['test_img'][:].shape[0] // self.batchSize
 
         self.batchIndexTrain = 0
         self.batchIndexVal = 0
@@ -51,9 +61,9 @@ class CropsGenerator:
         Return mean and std from dataset. It has been memorized. If not mean or std have been saved a KeyError is raised.
         :return:
         """
-        with h5py.File(self.data_path, 'r') as h5f:
-            mean = h5f['train_mean'][:].astype(np.float32)
-            std = h5f['train_std'][:].astype(np.float32)
+        # with h5py.File(self.data_path, 'r') as h5f:
+        mean = self.img_generator.h5f['train_mean'][:].astype(np.float32)
+        std = self.img_generator.h5f['train_std'][:].astype(np.float32)
         if self.numChannels == 1:
             mean = np.expand_dims(mean, axis=-1)
             std = np.expand_dims(std, axis=-1)
@@ -201,7 +211,6 @@ class CropsGenerator:
         """
         h5f_label = None
         batch_index = -2
-        # TODO: cambiare X_train in train_img e tutti gli altri
         if mode == 'train':
             h5f_label = 'train_img'
             batch_index = self.batchIndexTrain
@@ -221,8 +230,9 @@ class CropsGenerator:
             if self.batchIndexTest == self.num_test_batch:
                 self.batchIndexTest = 0
 
-        with h5py.File(self.data_path, 'r') as h5f:
-            x = h5f[h5f_label][batch_index * self.batchSize:(batch_index + 1) * self.batchSize, ...]
+        # with h5py.File(self.data_path, 'r') as h5f:
+        #     x = h5f[h5f_label][batch_index * self.batchSize:(batch_index + 1) * self.batchSize, ...]
+        x = self.img_generator(h5f_label, self.batchSize, batch_index)
         if self.numChannels == 1:
             x = np.expand_dims(x, axis=-1)
         X, y = self.__batch_generation_normalized(x.astype(np.float32))
