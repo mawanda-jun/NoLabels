@@ -188,7 +188,7 @@ class Siamese_AlexNet(object):
 
         valid_loss, valid_acc = self.sess.run([self.mean_loss, self.mean_accuracy])
         summary_valid = self.sess.run(tf.summary.merge_all(), feed_dict=feed_dict)
-        self.save_summary(summary_valid, epoch, mode='valid')
+        self.save_summary(summary_valid, epoch * self.data_reader.num_train_batch, mode='valid')
         if valid_acc > self.best_validation_accuracy:
             self.best_validation_accuracy = valid_acc
             self.save(epoch)
@@ -245,4 +245,4 @@ class Siamese_AlexNet(object):
             if not os.path.isdir(checkpoint_path) or not os.listdir(checkpoint_path):
                 return None, epoch  # dir does not exist
             else:
-                raise FileExistsError('Folder is not empty. Please delete or move existing files to avoid overwrites.')
+                raise FileExistsError('"{}" is not empty. Please delete or move existing files to avoid overwrites.'.format(checkpoint_path))
