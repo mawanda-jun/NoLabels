@@ -59,16 +59,19 @@ flags.DEFINE_integer('SUMMARY_FREQ', 100, 'Number of step to save summary')
 flags.DEFINE_integer('VAL_FREQ', 1000, 'Number of step to evaluate the network on Validation data')
 
 # Hyper-parameters
-flags.DEFINE_integer('batchSize', 50, 'training batch size')
+flags.DEFINE_integer('batchSize', 90, 'training batch size')
 flags.DEFINE_integer('val_batch_size', 25, 'validation batch size')
 flags.DEFINE_float('init_lr', 1e-3, 'Initial learning rate')
 flags.DEFINE_float('lr_min', 1e-5, 'Minimum learning rate')
 flags.DEFINE_float('keep_prob', 0.5, 'Keep probability for dropout layer')
 
 # data
-flags.DEFINE_integer('N_train_imgs', 140000, 'Total number of training examples')
-flags.DEFINE_integer('N_val_imgs', 49999, 'Total number of validation examples')
-flags.DEFINE_integer('N_test_imgs', 9998, 'Total number of test examples')
+flags.DEFINE_integer('N_train_imgs', 14000, 'Total number of training examples')
+# flags.DEFINE_integer('N_train_imgs', 140000, 'Total number of training examples')
+flags.DEFINE_integer('N_val_imgs', 4999, 'Total number of validation examples')
+# flags.DEFINE_integer('N_val_imgs', 49999, 'Total number of validation examples')
+flags.DEFINE_integer('N_test_imgs', 999, 'Total number of test examples')
+# flags.DEFINE_integer('N_test_imgs', 9998, 'Total number of test examples')
 flags.DEFINE_string('data_path', 'Dataset/resources/h5_files/ILSVRC_2e5.h5', 'Data path')
 flags.DEFINE_boolean('data_augment', True, 'Adds augmentation to data')
 flags.DEFINE_integer('max_angle', 40, 'Maximum rotation angle along each axis; when applying augmentation')

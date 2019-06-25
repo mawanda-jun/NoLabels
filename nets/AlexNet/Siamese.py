@@ -159,7 +159,8 @@ class Siamese_AlexNet(object):
         for epoch in range(self.global_step_int+1, self.conf.max_epoch):
             self.is_train = True
             for train_step in range(self.data_reader.num_train_batch):
-                if train_step % self.conf.SUMMARY_FREQ == 0:
+                if train_step % self.conf.SUMMARY_FREQ == 0 or train_step == self.data_reader.num_train_batch-1:
+                    # the second condition is needed to save the summary at the last train_step
                     _, _, _, summary = self.sess.run([self.train_op,
                                                       self.mean_loss_op,
                                                       self.mean_accuracy_op,
@@ -168,7 +169,7 @@ class Siamese_AlexNet(object):
                     global_step = (epoch - 1) * self.data_reader.num_train_batch + train_step
                     self.save_summary(summary, global_step, mode='train')
                     print('epoch {0}|{1:.01%},\ttrain_loss: {2:.4f}, train_acc: {3:.01%}'
-                          .format(epoch, train_step/self.data_reader.num_train_batch, loss, acc))
+                          .format(epoch, (train_step+1)/self.data_reader.num_train_batch, loss, acc))
                 else:
                     _, _, _ = self.sess.run([self.train_op, self.mean_loss_op, self.mean_accuracy_op], feed_dict=feed_dict)
             self.evaluate(epoch)
@@ -177,7 +178,7 @@ class Siamese_AlexNet(object):
         self.is_train = False
         val_handle = self.sess.run(self.val_iter.string_handle())
         val_init_op = self.val_iter.initializer
-        feed_dict = {self.handle: val_handle, self.keep_prob: self.conf.keep_prob}
+        feed_dict = {self.handle: val_handle, self.keep_prob: 1}
         self.sess.run(tf.local_variables_initializer())
         for step in range(self.data_reader.val_batch_size):
             # as in train method
@@ -187,7 +188,7 @@ class Siamese_AlexNet(object):
             self.sess.run([self.mean_loss_op, self.mean_accuracy_op], feed_dict=feed_dict)
 
         valid_loss, valid_acc = self.sess.run([self.mean_loss, self.mean_accuracy])
-        summary_valid = self.sess.run(tf.summary.merge_all(), feed_dict=feed_dict)
+        summary_valid = self.sess.run(self.merged_summary, feed_dict=feed_dict)
         self.save_summary(summary_valid, epoch * self.data_reader.num_train_batch, mode='valid')
         if valid_acc > self.best_validation_accuracy:
             self.best_validation_accuracy = valid_acc
