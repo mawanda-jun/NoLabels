@@ -22,6 +22,7 @@ class Siamese_AlexNet(object):
     def __init__(self, sess, conf, hamming_set):
         self.sess = sess
         self.conf = conf
+        _, self.global_step_int = self.check_if_model_exists(conf.reload_step)
         self.HammingSet = hamming_set
         self.input_shape = [None, conf.tileSize, conf.tileSize, conf.numChannels, conf.numCrops]
 
@@ -30,9 +31,9 @@ class Siamese_AlexNet(object):
         self.train_iter = self.train_set.make_initializable_iterator()
         self.val_set = self.data_reader.generate(mode='val')
         self.val_iter = self.val_set.make_initializable_iterator()
+        self.x, self.y, self.keep_prob = self.create_placeholders()
 
         self.is_train = tf.Variable(True, trainable=False, dtype=tf.bool)
-        self.x, self.y, self.keep_prob = self.create_placeholders()
         self.valid_loss = 0
         self.valid_acc = 0
         self.inference()
@@ -91,9 +92,9 @@ class Siamese_AlexNet(object):
         self.accuracy_func()
         with tf.name_scope('Optimizer'):
             with tf.name_scope('Learning_rate_decay'):
-                global_step = tf.get_variable('global_step', [], initializer=tf.constant_initializer(0),
+                global_step = tf.get_variable('global_step', [], initializer=tf.constant_initializer(self.global_step_int),
                                               trainable=False)
-                steps_per_epoch = self.conf.N // self.conf.batchSize
+                steps_per_epoch = self.conf.N_train_imgs // self.conf.batchSize
                 # steps_per_epoch = self.data_reader.num_train_batch
                 learning_rate = tf.train.exponential_decay(self.conf.init_lr,
                                                            global_step,
@@ -117,7 +118,10 @@ class Siamese_AlexNet(object):
     def configure_summary(self):
         # recon_img = tf.reshape(self.decoder_output, shape=(-1, self.conf.height, self.conf.width, self.conf.channel))
         summary_list = [tf.summary.scalar('Loss/total_train_loss', self.mean_loss),
-                        tf.summary.scalar('Accuracy/train_accuracy', self.mean_accuracy)]
+                        tf.summary.scalar('Accuracy/train_accuracy', self.mean_accuracy),
+                        tf.summary.scalar('Learning_rate', self.learning_rate),
+                        tf.summary.scalar('Loss/val_loss', self.valid_loss),
+                        tf.summary.scalar('Accuracy/val_acc', self.valid_acc)]
         self.merged_summary = tf.summary.merge(summary_list)
 
     def save_summary(self, summary, step, mode):
@@ -150,13 +154,13 @@ class Siamese_AlexNet(object):
             print('*' * 50)
             print('----> Continue Training from step #{}'.format(self.conf.reload_step))
             print('*' * 50)
-        else:
-            print('*' * 50)
-            print('----> Start Training')
-            print('*' * 50)
+
+        print('*' * 50)
+        print('----> Start Training')
+        print('*' * 50)
         # provide the network the iterators and the keep_prob we defined before (why the hell? We should put keep_prob outside)
         self.sess.run(train_init_op)
-        for epoch in range(1, self.conf.max_epoch):
+        for epoch in range(self.global_step_int+1, self.conf.max_epoch):
             self.is_train = True
             for train_step in range(self.data_reader.num_train_batch):
                 if train_step % self.conf.SUMMARY_FREQ == 0:
@@ -167,7 +171,7 @@ class Siamese_AlexNet(object):
                     loss, acc = self.sess.run([self.mean_loss, self.mean_accuracy])
                     global_step = (epoch - 1) * self.data_reader.num_train_batch + train_step
                     self.save_summary(summary, global_step, mode='train')
-                    print('epoch: {0:<6}, train_loss= {1:.4f}, train_acc={2:.01%}'.format(train_step, loss, acc))
+                    print('epoch {0}|{1:.01%},\ttrain_loss= {2:.4f}, train_acc={3:.01%}'.format(epoch, train_step/self.data_reader.num_train_batch, loss, acc))
                 else:
                     _, _, _ = self.sess.run([self.train_op, self.mean_loss_op, self.mean_accuracy_op], feed_dict=feed_dict)
             self.evaluate(epoch)
@@ -186,17 +190,17 @@ class Siamese_AlexNet(object):
             self.sess.run([self.mean_loss_op, self.mean_accuracy_op], feed_dict=feed_dict)
 
         summary_valid = self.sess.run(self.merged_summary, feed_dict=feed_dict)
-        valid_loss, valid_acc = self.sess.run([self.mean_loss, self.mean_accuracy])
-        self.save_summary(summary_valid, epoch, mode='valid')
-        if valid_acc > self.best_validation_accuracy:
-            self.best_validation_accuracy = valid_acc
+        self.valid_loss, self.valid_acc = self.sess.run([self.mean_loss, self.mean_accuracy])
+        self.save_summary(summary_valid, epoch, mode='train')
+        if self.valid_acc > self.best_validation_accuracy:
+            self.best_validation_accuracy = self.valid_acc
             self.save(epoch)
             improved_str = '(improved)'
         else:
             improved_str = ''
         print('-' * 20 + 'Validation' + '-' * 20)
         print('After {0} epoch: val_loss= {1:.4f}, val_acc={2:.01%} {3}'.
-              format(epoch, valid_loss, valid_acc, improved_str))
+              format(epoch, self.valid_loss, self.valid_acc, improved_str))
         print('-' * 50)
 
     def test(self, epoch_num):
@@ -222,11 +226,23 @@ class Siamese_AlexNet(object):
         self.saver.save(self.sess, checkpoint_path, global_step=epoch)
 
     def reload(self, epoch):
-        checkpoint_path = os.path.join(self.conf.modeldir+self.conf.run_name, self.conf.model_name)
-        model_path = checkpoint_path + '-' + str(epoch)
-        if not os.path.exists(model_path + '.meta'):
-            print('----> No such checkpoint found', model_path)
-            return
+        model_path, _ = self.check_if_model_exists(epoch)
         print('----> Restoring the model...')
         self.saver.restore(self.sess, model_path)
         print('----> Model-{} successfully restored'.format(epoch))
+
+    def check_if_model_exists(self, epoch: int) -> (str, int):
+        """
+        Checks if the model indicated in conf.reload_step exists. It raises a ValueError exception
+        :param epoch: epoch from which the user want to resume training
+        :return: the epoch if it exists. Raises an exception if it does not
+        """
+        if epoch is not 0:
+            checkpoint_path = os.path.join(self.conf.modeldir + self.conf.run_name, self.conf.model_name)
+            model_path = checkpoint_path + '-' + str(epoch)
+            if not os.path.exists(model_path + '.meta'):
+                # print('----> No such checkpoint found', model_path)
+                raise ValueError('----> No such checkpoint found: ', model_path)
+            return model_path, epoch
+        else:
+            return None, epoch

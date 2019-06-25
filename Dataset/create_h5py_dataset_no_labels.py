@@ -152,7 +152,7 @@ def generate_h5py(file_list: List, img_size=256, hdf5_file_name: str = 'data', t
         hdf5_out.create_dataset('test_img', (len(file_dict['test']), img_size, img_size, 3), np.uint8)
         hdf5_out.create_dataset('train_mean', (img_size, img_size, 3), np.float32)
         hdf5_out.create_dataset('train_std', (img_size, img_size, 3), np.float32)
-
+        # TODO: inserire anche le dimensioni rispettive, cosi' poi non c'e' bisogno di aprire tutto il file per recuperarle
         # make one thread for <set_type>
         threaded_types = []
         for set_type, img_list in file_dict.items():
