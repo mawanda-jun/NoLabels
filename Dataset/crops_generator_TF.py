@@ -126,11 +126,14 @@ class CropsGenerator:
 
     def one_hot(self, y):
         """
-        OneHot encoding for labels in y.
-        :param y: labels
+        OneHot encoding for y label.
+        :param y: label
         :return: y in the format of OneHot
         """
-        return np.array([1 if y == j else 0 for j in range(self.numClasses)])
+        tmp = np.zeros(self.numClasses)
+        tmp[y] = 1
+        return tmp
+        # return np.array([1 if y == j else 0 for j in range(self.numClasses)])
 
     def yield_cropped_images(self, mode='train'):
         """
@@ -161,29 +164,20 @@ class CropsGenerator:
                    )
         return dataset
 
-    def randomize(self):
-        """ Randomizes the order of data samples"""
-        with h5py.File(self.data_path, 'a') as h5f:
-            train_img = h5f['train_img'][:].astype(np.float32)
-            permutation = np.random.permutation(train_img.shape[0])
-            train_img = train_img[permutation, :, :, :]
-            del h5f['train_img']
-            h5f.create_dataset('train_img', data=train_img)
-
-    def color_channel_jitter(self, image):
-        """
-        Explain
-        """
-        # Determine the dimensions of the array, minus the crop around the border
-        # of 4 pixels (threshold margin due to 2 pixel jitter)
-        x_dim = image.shape[0] - self.colorJitter * 2
-        y_dim = image.shape[1] - self.colorJitter * 2
-        # Determine the jitters in all directions
-        R_xjit = random.randrange(self.colorJitter * 2 + 1)
-        R_yjit = random.randrange(self.colorJitter * 2 + 1)
-        # Seperate the colour channels
-        return_array = np.empty((x_dim, y_dim, 3), np.float32)
-        for colour_channel in range(3):
-            return_array[:, :, colour_channel] = \
-                image[R_xjit:x_dim +R_xjit, R_yjit:y_dim + R_yjit, colour_channel]
-        return return_array
+    # def color_channel_jitter(self, image):
+    #     """
+    #     Explain
+    #     """
+    #     # Determine the dimensions of the array, minus the crop around the border
+    #     # of 4 pixels (threshold margin due to 2 pixel jitter)
+    #     x_dim = image.shape[0] - self.colorJitter * 2
+    #     y_dim = image.shape[1] - self.colorJitter * 2
+    #     # Determine the jitters in all directions
+    #     R_xjit = random.randrange(self.colorJitter * 2 + 1)
+    #     R_yjit = random.randrange(self.colorJitter * 2 + 1)
+    #     # Seperate the colour channels
+    #     return_array = np.empty((x_dim, y_dim, 3), np.float32)
+    #     for colour_channel in range(3):
+    #         return_array[:, :, colour_channel] = \
+    #             image[R_xjit:x_dim +R_xjit, R_yjit:y_dim + R_yjit, colour_channel]
+    #     return return_array
