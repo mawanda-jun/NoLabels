@@ -158,30 +158,32 @@ class Siamese_AlexNet(object):
         self.sess.run(train_init_op)
         for epoch in range(1, self.conf.max_epoch):
             self.is_train = True
-            if epoch % self.conf.SUMMARY_FREQ == 0:
-                _, _, _, summary = self.sess.run([self.train_op,
-                                                  self.mean_loss_op,
-                                                  self.mean_accuracy_op,
-                                                  self.merged_summary], feed_dict=feed_dict)
-                loss, acc = self.sess.run([self.mean_loss, self.mean_accuracy])
-                self.save_summary(summary, epoch, mode='train')
-                print('epoch: {0:<6}, train_loss= {1:.4f}, train_acc={2:.01%}'.format(epoch, loss, acc))
-                if epoch % self.conf.VAL_FREQ == 0:
-                    self.evaluate(epoch)
-            else:
-                _, _, _ = self.sess.run([self.train_op, self.mean_loss_op, self.mean_accuracy_op], feed_dict=feed_dict)
+            for train_step in range(self.data_reader.num_train_batch):
+                if train_step % self.conf.SUMMARY_FREQ == 0:
+                    _, _, _, summary = self.sess.run([self.train_op,
+                                                      self.mean_loss_op,
+                                                      self.mean_accuracy_op,
+                                                      self.merged_summary], feed_dict=feed_dict)
+                    loss, acc = self.sess.run([self.mean_loss, self.mean_accuracy])
+                    global_step = (epoch - 1) * self.data_reader.num_train_batch + train_step
+                    self.save_summary(summary, global_step, mode='train')
+                    print('epoch: {0:<6}, train_loss= {1:.4f}, train_acc={2:.01%}'.format(train_step, loss, acc))
+                else:
+                    _, _, _ = self.sess.run([self.train_op, self.mean_loss_op, self.mean_accuracy_op], feed_dict=feed_dict)
+            self.evaluate(epoch)
 
     def evaluate(self, epoch):
         self.is_train = False
-        self.sess.run(tf.local_variables_initializer())
-        # as in train method
         val_handle = self.sess.run(self.val_iter.string_handle())
         val_init_op = self.val_iter.initializer
         feed_dict = {self.handle: val_handle, self.keep_prob: self.conf.keep_prob}
-        # feed_dict = {self.handle_iter: self.val_iter, self.keep_prob: self.conf.keep_prob}
-        # self.x, self.y = self.iter.get_next()
-        self.sess.run(val_init_op)
-        self.sess.run([self.mean_loss_op, self.mean_accuracy_op], feed_dict=feed_dict)
+        self.sess.run(tf.local_variables_initializer())
+        for step in range(self.data_reader.val_batch_size):
+            # as in train method
+            # feed_dict = {self.handle_iter: self.val_iter, self.keep_prob: self.conf.keep_prob}
+            # self.x, self.y = self.iter.get_next()
+            self.sess.run(val_init_op)
+            self.sess.run([self.mean_loss_op, self.mean_accuracy_op], feed_dict=feed_dict)
 
         summary_valid = self.sess.run(self.merged_summary, feed_dict=feed_dict)
         valid_loss, valid_acc = self.sess.run([self.mean_loss, self.mean_accuracy])
