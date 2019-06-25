@@ -15,6 +15,7 @@ from AlexNet import AlexNet
 import numpy as np
 from Dataset.crops_generator_TF import CropsGenerator
 import os
+from timeit import default_timer as timer
 
 
 class Siamese_AlexNet(object):
@@ -38,6 +39,7 @@ class Siamese_AlexNet(object):
         self.valid_acc = 0
         self.inference()
         self.configure_network()
+        self.time = 0
 
     def create_placeholders(self):
         with tf.name_scope('Input'):
@@ -161,8 +163,10 @@ class Siamese_AlexNet(object):
         # provide the network the iterators and the keep_prob we defined before (why the hell? We should put keep_prob outside)
         self.sess.run(train_init_op)
         for epoch in range(self.global_step_int+1, self.conf.max_epoch):
+            self.time = timer()
             self.is_train = True
             for train_step in range(self.data_reader.num_train_batch):
+                start_train_step = timer()
                 if train_step % self.conf.SUMMARY_FREQ == 0:
                     _, _, _, summary = self.sess.run([self.train_op,
                                                       self.mean_loss_op,
@@ -171,7 +175,8 @@ class Siamese_AlexNet(object):
                     loss, acc = self.sess.run([self.mean_loss, self.mean_accuracy])
                     global_step = (epoch - 1) * self.data_reader.num_train_batch + train_step
                     self.save_summary(summary, global_step, mode='train')
-                    print('epoch {0}|{1:.01%},\ttrain_loss= {2:.4f}, train_acc={3:.01%}'.format(epoch, train_step/self.data_reader.num_train_batch, loss, acc))
+                    print('epoch {0}|{1:.01%},\ttrain_loss: {2:.4f}, train_acc: {3:.01%}, elapsed time: {4:.2}s'
+                          .format(epoch, train_step/self.data_reader.num_train_batch, loss, acc, timer() - start_train_step))
                 else:
                     _, _, _ = self.sess.run([self.train_op, self.mean_loss_op, self.mean_accuracy_op], feed_dict=feed_dict)
             self.evaluate(epoch)
@@ -199,8 +204,8 @@ class Siamese_AlexNet(object):
         else:
             improved_str = ''
         print('-' * 20 + 'Validation' + '-' * 20)
-        print('After {0} epoch: val_loss= {1:.4f}, val_acc={2:.01%} {3}'.
-              format(epoch, self.valid_loss, self.valid_acc, improved_str))
+        print('After {0} epoch: val_loss: {1:.4f}, val_acc: {2:.01%}, epoch time: {3:.2}s {4}'.
+              format(epoch, self.valid_loss, self.valid_acc, self.time-timer(), improved_str))
         print('-' * 50)
 
     def test(self, epoch_num):
@@ -237,12 +242,15 @@ class Siamese_AlexNet(object):
         :param epoch: epoch from which the user want to resume training
         :return: the epoch if it exists. Raises an exception if it does not
         """
+        checkpoint_path = os.path.join(self.conf.modeldir + self.conf.run_name, self.conf.model_name)
         if epoch is not 0:
-            checkpoint_path = os.path.join(self.conf.modeldir + self.conf.run_name, self.conf.model_name)
             model_path = checkpoint_path + '-' + str(epoch)
             if not os.path.exists(model_path + '.meta'):
                 # print('----> No such checkpoint found', model_path)
                 raise ValueError('----> No such checkpoint found: ', model_path)
             return model_path, epoch
         else:
-            return None, epoch
+            if not os.path.isdir(checkpoint_path) or not os.listdir(checkpoint_path):
+                return None, epoch  # dir does not exist
+            else:
+                raise FileExistsError('Folder is not empty. Please delete or move existing files to avoid overwrites.')
