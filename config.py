@@ -14,7 +14,7 @@ flags.DEFINE_boolean('grad_clip', False, 'Adds gradient clipping to get rid of e
 flags.DEFINE_boolean('L2_reg', True, 'Adds L2-regularization to all the network weights')
 flags.DEFINE_float('lmbda', 5e-04, 'L2-regularization coefficient')
 flags.DEFINE_integer('iter', 1, 'Number of EM-routing iterations')
-flags.DEFINE_boolean('fc', True, 'Adds a fully connected layer at the end of each network')
+flags.DEFINE_boolean('fc', False, 'Adds a fully connected layer at the end of each network')
 
 # Matrix Capsule architecture
 flags.DEFINE_boolean('use_bias', True, 'Adds bias to init capsules')
@@ -61,9 +61,9 @@ flags.DEFINE_integer('VAL_FREQ', 1000, 'Number of step to evaluate the network o
 # Hyper-parameters
 flags.DEFINE_integer('batchSize', 50, 'training batch size')
 flags.DEFINE_integer('val_batch_size', 25, 'validation batch size')
-flags.DEFINE_float('init_lr', 1e-2, 'Initial learning rate')
+flags.DEFINE_float('init_lr', 1e-3, 'Initial learning rate')
 flags.DEFINE_float('lr_min', 1e-5, 'Minimum learning rate')
-flags.DEFINE_float('keep_prob', 0.7, 'Keep probability for dropout layer')
+flags.DEFINE_float('keep_prob', 0.5, 'Keep probability for dropout layer')
 
 # data
 flags.DEFINE_integer('N_train_imgs', 140000, 'Total number of training examples')
