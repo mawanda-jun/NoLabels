@@ -34,8 +34,6 @@ class Siamese_AlexNet(object):
         self.x, self.y, self.keep_prob = self.create_placeholders()
 
         self.is_train = tf.Variable(True, trainable=False, dtype=tf.bool)
-        self.valid_loss = 0
-        self.valid_acc = 0
         self.inference()
         self.configure_network()
 
@@ -117,11 +115,9 @@ class Siamese_AlexNet(object):
 
     def configure_summary(self):
         # recon_img = tf.reshape(self.decoder_output, shape=(-1, self.conf.height, self.conf.width, self.conf.channel))
-        summary_list = [tf.summary.scalar('Loss/total_train_loss', self.mean_loss),
-                        tf.summary.scalar('Accuracy/train_accuracy', self.mean_accuracy),
-                        tf.summary.scalar('Learning_rate', self.learning_rate),
-                        tf.summary.scalar('Loss/val_loss', self.valid_loss),
-                        tf.summary.scalar('Accuracy/val_acc', self.valid_acc)]
+        summary_list = [tf.summary.scalar('Loss/total_loss', self.mean_loss),
+                        tf.summary.scalar('Accuracy/accuracy', self.mean_accuracy),
+                        tf.summary.scalar('Learning_rate', self.learning_rate)]
         self.merged_summary = tf.summary.merge(summary_list)
 
     def save_summary(self, summary, step, mode):
@@ -190,18 +186,18 @@ class Siamese_AlexNet(object):
             self.sess.run(val_init_op)
             self.sess.run([self.mean_loss_op, self.mean_accuracy_op], feed_dict=feed_dict)
 
-        summary_valid = self.sess.run(self.merged_summary, feed_dict=feed_dict)
-        self.valid_loss, self.valid_acc = self.sess.run([self.mean_loss, self.mean_accuracy])
+        valid_loss, valid_acc = self.sess.run([self.mean_loss, self.mean_accuracy])
+        summary_valid = self.sess.run(tf.summary.merge_all(), feed_dict=feed_dict)
         self.save_summary(summary_valid, epoch, mode='valid')
-        if self.valid_acc > self.best_validation_accuracy:
-            self.best_validation_accuracy = self.valid_acc
+        if valid_acc > self.best_validation_accuracy:
+            self.best_validation_accuracy = valid_acc
             self.save(epoch)
             improved_str = '(improved)'
         else:
             improved_str = ''
         print('-' * 20 + 'Validation' + '-' * 20)
         print('After {0} epoch: val_loss: {1:.4f}, val_acc: {2:.01%} {3}'.
-              format(epoch, self.valid_loss, self.valid_acc, improved_str))
+              format(epoch, valid_loss, valid_acc, improved_str))
         print('-' * 50)
 
     def test(self, epoch_num):
@@ -238,9 +234,9 @@ class Siamese_AlexNet(object):
         :param epoch: epoch from which the user want to resume training
         :return: the epoch if it exists. Raises an exception if it does not
         """
-        checkpoint_path = os.path.join(self.conf.modeldir + self.conf.run_name, self.conf.model_name)
+        checkpoint_path = os.path.join(self.conf.modeldir + self.conf.run_name)
         if epoch is not 0:
-            model_path = checkpoint_path + '-' + str(epoch)
+            model_path = os.path.join(checkpoint_path, self.conf.model_name + '-' + str(epoch))
             if not os.path.exists(model_path + '.meta'):
                 # print('----> No such checkpoint found', model_path)
                 raise ValueError('----> No such checkpoint found: ', model_path)
