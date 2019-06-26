@@ -159,7 +159,11 @@ class Siamese_AlexNet(object):
         for epoch in range(self.global_step_int+1, self.conf.max_epoch):
             self.is_train = True
             for train_step in range(self.data_reader.num_train_batch):
-                if train_step % self.conf.SUMMARY_FREQ == 0 or train_step == self.data_reader.num_train_batch-1:
+                summary_time = train_step % self.conf.SUMMARY_FREQ == 0
+                last_step = train_step == self.data_reader.num_train_batch - 1
+                not_first_step = train_step > 0
+                # if train_step > 0 and (train_step % self.conf.SUMMARY_FREQ == 0 or train_step == self.data_reader.num_train_batch-1):
+                if not_first_step and (summary_time or last_step):
                     # the second condition is needed to save the summary at the last train_step
                     _, _, _, summary = self.sess.run([self.train_op,
                                                       self.mean_loss_op,
