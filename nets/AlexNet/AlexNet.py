@@ -11,16 +11,16 @@ Comments: Includes function which creates the 3D ResNet with 50 layer.
 **********************************************************************************
 """
 
-from ops import conv_2d, flatten_layer, fc_layer, dropout, max_pool, lrn
+from nets.AlexNet.ops import conv_2d, flatten_layer, fc_layer, dropout, max_pool, lrn
 
 
 def AlexNet(X, keep_prob, is_train):
-    net = conv_2d(X, 7, 2, 96, 'CONV1', trainable=True)
-    net = lrn(net)
+    net = conv_2d(X, 11, 2, 96, 'CONV1', trainable=True)
     net = max_pool(net, 3, 2, 'MaxPool1')
-    net = conv_2d(net, 5, 2, 256, 'CONV2', trainable=True)
     net = lrn(net)
+    net = conv_2d(net, 5, 2, 256, 'CONV2', trainable=True)
     net = max_pool(net, 3, 2, 'MaxPool2')
+    net = lrn(net)
     net = conv_2d(net, 3, 1, 384, 'CONV3', trainable=True)
     net = conv_2d(net, 3, 1, 384, 'CONV4', trainable=True)
     net = conv_2d(net, 3, 1, 256, 'CONV5', trainable=True)
