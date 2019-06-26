@@ -79,7 +79,7 @@ class CropsGenerator:
         """
         # Jitter the colour channel
         # NOT IMPLEMENTED YET
-        image = self.color_channel_jitter(image)
+        # image = self.color_channel_jitter(image)
 
         y_dim, x_dim = image.shape[:2]
         # Have the x & y coordinate of the crop
@@ -97,8 +97,11 @@ class CropsGenerator:
                 x_start = crop_x + col * self.cellSize + random.randrange(self.cellSize - self.tileSize)
                 y_start = crop_y + row * self.cellSize + random.randrange(self.cellSize - self.tileSize)
                 # Put the crop in the list of pieces randomly according to the number picked from max_hamming_set
-                final_crops[:, :, :, self.maxHammingSet[perm_index, row * crops_per_side + col]] = \
-                    image[y_start:y_start + self.tileSize, x_start:x_start + self.tileSize, :]
+                crop = image[y_start:y_start + self.tileSize, x_start:x_start + self.tileSize, :]
+                crop = self.color_channel_jitter(crop)  # jitter every image in a random way
+                final_crops[:, :, :, self.maxHammingSet[perm_index, row * crops_per_side + col]] = crop
+                # final_crops[:, :, :, self.maxHammingSet[perm_index, row * crops_per_side + col]] = \
+                #     image[y_start:y_start + self.tileSize, x_start:x_start + self.tileSize, :]
         return final_crops, perm_index
 
     def __single_generation_normalized(self, x: np.array):
@@ -107,9 +110,20 @@ class CropsGenerator:
         :param x: is a single images.
         :return:
         """
+        # make it greyscale with probability 0.3% as in the paper
+        if random.random() < 0.3:
+            b = x[..., 0]
+            g = x[..., 1]
+            r = x[..., 2]
+            x = 0.21 * r + 0.72 * g + 0.07 * b
+            # expanding dimension to preserve net layout
+            x = np.expand_dims(x, axis=-1)
+            x = np.concatenate([x, x, x], axis=-1)
+
         # modify each image individually
         x -= self.meanTensor
         x /= self.stdTensor
+
         # create <numCrops> long array for every tile of one image
         tile = np.empty((self.tileSize, self.tileSize, self.numChannels), np.float32)
         X = [tile for _ in range(self.numCrops)]
@@ -161,20 +175,18 @@ class CropsGenerator:
                    )
         return dataset
 
-    def color_channel_jitter(self, image):
+    def color_channel_jitter(self, img):
         """
-        Explain
+        Spatial image jitter, aka movement of color channel in various manners
         """
-        # Determine the dimensions of the array, minus the crop around the border
-        # of 4 pixels (threshold margin due to 2 pixel jitter)
-        x_dim = image.shape[0] - self.colorJitter * 2
-        y_dim = image.shape[1] - self.colorJitter * 2
-        # Determine the jitters in all directions
-        R_xjit = random.randrange(self.colorJitter * 2 + 1)
-        R_yjit = random.randrange(self.colorJitter * 2 + 1)
-        # Seperate the colour channels
-        return_array = np.empty((x_dim, y_dim, 3), np.float32)
-        for colour_channel in range(3):
-            return_array[:, :, colour_channel] = \
-                image[R_xjit:x_dim +R_xjit, R_yjit:y_dim + R_yjit, colour_channel]
-        return return_array
+        r_jit = random.randrange(-self.colorJitter, self.colorJitter)
+        g_jit = random.randrange(-self.colorJitter, self.colorJitter)
+        b_jit = random.randrange(-self.colorJitter, self.colorJitter)
+        R = img[:, :, 0]
+        G = img[:, :, 1]
+        B = img[:, :, 2]
+        return np.dstack((
+            np.roll(R, r_jit, axis=0),
+            np.roll(G, g_jit, axis=1),
+            np.roll(B, b_jit, axis=0)
+        ))
