@@ -18,8 +18,6 @@ class H5Generator:
         :param file:
         """
         self.h5f = h5py.File(file, 'r')  # it will be closed when the context will be terminated
-        # self.file = file
-        # self.next = None
 
     def __call__(self, mode, *args, **kwargs):
         for img in self.h5f[mode]:
@@ -47,7 +45,6 @@ class CropsGenerator:
         self.maxHammingSet = np.array(max_hamming_set, dtype=np.uint8)
         self.numClasses = self.maxHammingSet.shape[0]  # number of different jigsaw classes
 
-        # with h5py.File(self.data_path, 'r') as h5f:
         # shapes of datasets (train, validation, test):
         # (140000, 256, 256, 3)
         # (49999, 256, 256, 3)
@@ -55,10 +52,6 @@ class CropsGenerator:
         self.num_train_batch = conf.N_train_imgs // self.batchSize
         self.num_val_batch = conf.N_val_imgs // self.batchSize
         self.num_test_batch = conf.N_test_imgs // self.batchSize
-
-        # self.batchIndexTrain = 0
-        # self.batchIndexVal = 0
-        # self.batchIndexTest = 0
 
     def get_stats(self):
         """
@@ -86,7 +79,7 @@ class CropsGenerator:
         """
         # Jitter the colour channel
         # NOT IMPLEMENTED YET
-        # image = self.color_channel_jitter(image)
+        image = self.color_channel_jitter(image)
 
         y_dim, x_dim = image.shape[:2]
         # Have the x & y coordinate of the crop
@@ -168,20 +161,20 @@ class CropsGenerator:
                    )
         return dataset
 
-    # def color_channel_jitter(self, image):
-    #     """
-    #     Explain
-    #     """
-    #     # Determine the dimensions of the array, minus the crop around the border
-    #     # of 4 pixels (threshold margin due to 2 pixel jitter)
-    #     x_dim = image.shape[0] - self.colorJitter * 2
-    #     y_dim = image.shape[1] - self.colorJitter * 2
-    #     # Determine the jitters in all directions
-    #     R_xjit = random.randrange(self.colorJitter * 2 + 1)
-    #     R_yjit = random.randrange(self.colorJitter * 2 + 1)
-    #     # Seperate the colour channels
-    #     return_array = np.empty((x_dim, y_dim, 3), np.float32)
-    #     for colour_channel in range(3):
-    #         return_array[:, :, colour_channel] = \
-    #             image[R_xjit:x_dim +R_xjit, R_yjit:y_dim + R_yjit, colour_channel]
-    #     return return_array
+    def color_channel_jitter(self, image):
+        """
+        Explain
+        """
+        # Determine the dimensions of the array, minus the crop around the border
+        # of 4 pixels (threshold margin due to 2 pixel jitter)
+        x_dim = image.shape[0] - self.colorJitter * 2
+        y_dim = image.shape[1] - self.colorJitter * 2
+        # Determine the jitters in all directions
+        R_xjit = random.randrange(self.colorJitter * 2 + 1)
+        R_yjit = random.randrange(self.colorJitter * 2 + 1)
+        # Seperate the colour channels
+        return_array = np.empty((x_dim, y_dim, 3), np.float32)
+        for colour_channel in range(3):
+            return_array[:, :, colour_channel] = \
+                image[R_xjit:x_dim +R_xjit, R_yjit:y_dim + R_yjit, colour_channel]
+        return return_array
