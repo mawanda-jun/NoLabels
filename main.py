@@ -1,35 +1,35 @@
 import h5py
 import tensorflow as tf
 from Dataset.generate_hamming_set import hamming_set
-from config import args
+from config import conf
 import numpy as np
 import os
 
-if args.model == 'alexnet':
+if conf.model == 'alexnet':
     from nets.AlexNet.Siamese import Siamese_AlexNet as SiameseNet
 else:
     from nets.CapsNet.Siamese import SiameseCapsNet as SiameseNet
 
 
 def main(_):
-    if args.generateHammingSet:
-        hamming_set(args.numCrops, args.hammingSetSize,
-                    args.selectionMethod, args.hammingFileName)
+    if conf.generateHammingSet:
+        hamming_set(conf.numCrops, conf.hammingSetSize,
+                    conf.selectionMethod, conf.hammingFileName)
 
-    with h5py.File(os.path.join('Dataset', args.resources, args.hammingFileName+str(args.hammingSetSize)+'.h5'), 'r') as h5f:
+    with h5py.File(os.path.join('Dataset', conf.resources, conf.hammingFileName + str(conf.hammingSetSize) + '.h5'), 'r') as h5f:
         HammingSet = np.array(h5f['max_hamming_set'])
 
-    if args.mode not in ['train', 'test', 'predict']:
-        print('invalid mode: ', args.mode)
+    if conf.mode not in ['train', 'test', 'predict']:
+        print('invalid mode: ', conf.mode)
         print("Please input a mode: train, test, or predict")
     else:
-        model = SiameseNet(tf.Session(), args, HammingSet)
-        os.makedirs(args.modeldir+args.run_name, exist_ok=True)
-        os.makedirs(args.logdir+args.run_name, exist_ok=True)
-        os.makedirs(args.savedir+args.run_name, exist_ok=True)
-        if args.mode == 'train':
+        model = SiameseNet(tf.Session(), conf, HammingSet)
+        os.makedirs(conf.modeldir + conf.run_name, exist_ok=True)
+        os.makedirs(conf.logdir + conf.run_name, exist_ok=True)
+        os.makedirs(conf.savedir + conf.run_name, exist_ok=True)
+        if conf.mode == 'train':
             model.train()
-        elif args.mode == 'test':
+        elif conf.mode == 'test':
             model.test(epoch_num=6)
 
 

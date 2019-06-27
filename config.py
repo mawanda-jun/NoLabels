@@ -90,4 +90,4 @@ flags.DEFINE_string('model_name', 'model', 'Model file name')
 flags.DEFINE_integer('reload_step', 0, 'Reload step to continue training')
 
 # args = tf.app.flags.FLAGS
-args = tf.flags.FLAGS
+conf = tf.flags.FLAGS
