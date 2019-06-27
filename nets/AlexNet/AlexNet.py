@@ -15,19 +15,19 @@ from nets.AlexNet.ops import conv_2d, flatten_layer, fc_layer, dropout, max_pool
 
 
 def AlexNet(X, keep_prob, is_train):
-    net = conv_2d(X, 11, 2, 96, 'CONV1', trainable=True)
+    net = conv_2d(X, 11, 2, 96, 'CONV1', trainable=True, is_train=is_train, batch_norm=True)
     net = max_pool(net, 3, 2, 'MaxPool1')
     net = lrn(net)
-    net = conv_2d(net, 5, 2, 256, 'CONV2', trainable=True)
+    net = conv_2d(net, 5, 2, 256, 'CONV2', trainable=True, is_train=is_train, batch_norm=True)
     net = max_pool(net, 3, 2, 'MaxPool2')
     net = lrn(net)
-    net = conv_2d(net, 3, 1, 384, 'CONV3', trainable=True)
-    net = conv_2d(net, 3, 1, 384, 'CONV4', trainable=True)
-    net = conv_2d(net, 3, 1, 256, 'CONV5', trainable=True)
+    net = conv_2d(net, 3, 1, 384, 'CONV3', trainable=True, is_train=is_train, batch_norm=True)
+    net = conv_2d(net, 3, 1, 384, 'CONV4', trainable=True, is_train=is_train, batch_norm=True)
+    net = conv_2d(net, 3, 1, 256, 'CONV5', trainable=True, is_train=is_train, batch_norm=True)
     net = max_pool(net, 3, 2, 'MaxPool3')
     layer_flat = flatten_layer(net)
-    net = fc_layer(layer_flat, 512, 'FC1', trainable=True, use_relu=True)
-    net = dropout(net, keep_prob)
+    net = fc_layer(layer_flat, 512, 'FC1', trainable=True, use_relu=True, is_train=is_train)
+    net = dropout(net, keep_prob, is_train=is_train)
     return net
 
 
