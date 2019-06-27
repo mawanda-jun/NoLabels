@@ -9,9 +9,9 @@ This network is almost similar to the one with 50 layer used in the original
 paper: "Deep Residual Learning for Image Recognition"
 **********************************************************************************
 """
-from loss_ops import cross_entropy_loss
-from ops import *
-from AlexNet import AlexNet
+from nets.AlexNet.loss_ops import cross_entropy_loss
+from nets.AlexNet.ops import *
+from nets.AlexNet.AlexNet import AlexNet
 import numpy as np
 from Dataset.crops_generator_TF import CropsGenerator
 import os
