@@ -27,12 +27,12 @@ def AlexNet(X, keep_prob, is_train):
     net = max_pool(net, 3, 2, 'MaxPool3')
     layer_flat = flatten_layer(net)
     net = fc_layer(layer_flat, 512, 'FC1', trainable=True, use_relu=True, is_train=is_train)
-    net = dropout(net, keep_prob, is_train=is_train)
+    net = dropout(net, keep_prob)
     return net
 
 
 def AlexNet_target_task(X, keep_prob, num_cls):
-    net = conv_2d(X, 7, 2, 96, 'CONV1', trainable=False)
+    net = conv_2d(X, 11, 2, 96, 'CONV1', trainable=False)
     net = lrn(net)
     net = max_pool(net, 3, 2, 'MaxPool1')
     net = conv_2d(net, 5, 2, 256, 'CONV2', trainable=False)
