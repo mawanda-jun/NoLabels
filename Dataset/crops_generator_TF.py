@@ -66,7 +66,7 @@ class CropsGenerator:
             std = np.expand_dims(std, axis=-1)
         return mean, std
 
-    def create_croppings(self, image: np.array, perm_index: int):
+    def create_croppings(self, image: np.array):
         """
         Makes croppings from image
         The 3x3 grid is numbered as follows:
@@ -77,11 +77,9 @@ class CropsGenerator:
         :param perm_index = index of referred permutation in max_hamming_set
         :return array of croppings (<num_croppings>) made of (heigh x width x colour channels) arrays
         """
-        # Jitter the colour channel
-        # NOT IMPLEMENTED YET
-        # image = self.color_channel_jitter(image)
 
         y_dim, x_dim = image.shape[:2]
+        perm_index = int(random.randrange(self.numClasses))
         # Have the x & y coordinate of the crop
         if x_dim != self.cropSize:
             # dimension of image is bigger than cropSize aka it has not been cropped before
@@ -128,8 +126,7 @@ class CropsGenerator:
         tile = np.empty((self.tileSize, self.tileSize, self.numChannels), np.float32)
         X = [tile for _ in range(self.numCrops)]
 
-        perm_index = int(random.randrange(self.numClasses))
-        tiles, y = self.create_croppings(x, perm_index)
+        tiles, y = self.create_croppings(x)
         for position_in_crop in range(self.numCrops):
             X[position_in_crop][:, :, :] = tiles[:, :, :, position_in_crop]
 
