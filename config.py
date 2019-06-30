@@ -42,7 +42,7 @@ flags.DEFINE_string('model', 'alexnet', 'matrix_capsule or vector_capsule or ale
 
 # hamming set
 flags.DEFINE_boolean('generateHammingSet', False, 'Generate a new HammingSet')
-flags.DEFINE_integer('hammingSetSize', 100, 'Hamming set size')
+flags.DEFINE_integer('hammingSetSize', 10, 'Hamming set size')
 flags.DEFINE_string('selectionMethod', 'max', 'max or mean')
 flags.DEFINE_string('hammingFileName', 'max_hamming_set_', 'Name of the file to be saved')
 
@@ -61,16 +61,16 @@ flags.DEFINE_integer('VAL_FREQ', 1000, 'Number of step to evaluate the network o
 # Hyper-parameters
 flags.DEFINE_integer('batchSize', 90, 'training batch size')
 flags.DEFINE_integer('val_batch_size', 90, 'validation batch size')
-flags.DEFINE_float('init_lr', 1e-3, 'Initial l,earning rate')
-flags.DEFINE_float('lr_min', 1e-4, 'Minimum learning rate')
-flags.DEFINE_float('keep_prob', 0.5, 'Keep probability for dropout layer')
+flags.DEFINE_float('init_lr', 1e-6, 'Initial l,earning dropout_rate')
+flags.DEFINE_float('lr_min', 1e-8, 'Minimum learning dropout_rate')
+flags.DEFINE_float('dropout_rate', 0.5, 'Rate (== 1-keep_prob) for dropout layer')
 
 # data
-# flags.DEFINE_integer('N_train_imgs', 55000, 'Total number of training examples')
+# flags.DEFINE_integer('N_train_imgs', 10000, 'Total number of training examples')
 flags.DEFINE_integer('N_train_imgs', 140000, 'Total number of training examples')
-# flags.DEFINE_integer('N_val_imgs', 19000, 'Total number of validation examples')
+# flags.DEFINE_integer('N_val_imgs', 4000, 'Total number of validation examples')
 flags.DEFINE_integer('N_val_imgs', 49999, 'Total number of validation examples')
-# flags.DEFINE_integer('N_test_imgs', 4000, 'Total number of test examples')
+# flags.DEFINE_integer('N_test_imgs', 1000, 'Total number of test examples')
 flags.DEFINE_integer('N_test_imgs', 9998, 'Total number of test examples')
 flags.DEFINE_string('data_path', 'Dataset/resources/h5_files/ILSVRC_2e5.h5', 'Data path')
 flags.DEFINE_boolean('data_augment', True, 'Adds augmentation to data')
