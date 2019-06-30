@@ -43,13 +43,13 @@ def conv_2d(inputs, filter_size, stride, num_filters, name, trainable=True,
                              filter=weights,
                              strides=[1, stride, stride, 1],
                              padding="SAME")
+        if use_relu:
+            layer = tf.nn.relu(layer)
         if batch_norm:
             layer = batch_norm_wrapper(layer, is_train)
         else:
             biases = bias_variable(trainable, [num_filters])
             layer += biases
-        if use_relu:
-            layer = tf.nn.relu(layer)
         if add_reg:
             tf.add_to_collection('weights', weights)
     return layer
@@ -65,8 +65,10 @@ def flatten_layer(layer):
 
 
 def fc_layer(bottom, out_dim, name, is_train=True, trainable=True,
-             batch_norm=False, add_reg=False, use_relu=True):
+             batch_norm=False, add_reg=False, use_relu=True, use_softmax=False):
     """Create a fully connected layer"""
+    if use_relu and use_softmax:
+        raise ValueError('Cannot use relu and softmax together')
     in_dim = bottom.get_shape()[1]
     with tf.variable_scope(name):
         weights = weight_variable(trainable, shape=[in_dim, out_dim])
@@ -79,6 +81,8 @@ def fc_layer(bottom, out_dim, name, is_train=True, trainable=True,
             layer += biases
         if use_relu:
             layer = tf.nn.relu(layer)
+        elif use_softmax:
+            layer = tf.nn.softmax(layer)
         if add_reg:
             tf.add_to_collection('weights', weights)
     return layer
@@ -102,28 +106,30 @@ def avg_pool(x, ksize, stride, name):
                           name=name)
 
 
-def dropout(x, keep_prob):
+def dropout(x, rate, is_train):
     """Create a dropout layer."""
-    return tf.nn.dropout(x, keep_prob)
+    return tf.keras.layers.Dropout(rate)(x, training=is_train)
+    # return tf.nn.dropout(x, dropout_rate)
 
 
-def batch_norm_wrapper(inputs, is_training, decay=0.999, epsilon=1e-3):
-    scale = tf.Variable(tf.ones([inputs.get_shape()[-1]]))
-    beta = tf.Variable(tf.zeros([inputs.get_shape()[-1]]))
-    pop_mean = tf.Variable(tf.zeros([inputs.get_shape()[-1]]), trainable=False)
-    pop_var = tf.Variable(tf.ones([inputs.get_shape()[-1]]), trainable=False)
-
-    if is_training:
-        if len(inputs.get_shape().as_list()) == 4:  # For convolutional layers
-            batch_mean, batch_var = tf.nn.moments(inputs, [0, 1, 2])
-        else:  # For fully-connected layers
-            batch_mean, batch_var = tf.nn.moments(inputs, [0])
-        train_mean = tf.assign(pop_mean, pop_mean * decay + batch_mean * (1 - decay))
-        train_var = tf.assign(pop_var, pop_var * decay + batch_var * (1 - decay))
-        with tf.control_dependencies([train_mean, train_var]):
-            return tf.nn.batch_normalization(inputs, batch_mean, batch_var, beta, scale, epsilon)
-    else:
-        return tf.nn.batch_normalization(inputs, pop_mean, pop_var, beta, scale, epsilon)
+def batch_norm_wrapper(inputs, is_training, decay=0.99, epsilon=1e-3):
+    # scale = tf.Variable(tf.ones([inputs.get_shape()[-1]]))
+    # beta = tf.Variable(tf.zeros([inputs.get_shape()[-1]]))
+    # pop_mean = tf.Variable(tf.zeros([inputs.get_shape()[-1]]), trainable=False)
+    # pop_var = tf.Variable(tf.ones([inputs.get_shape()[-1]]), trainable=False)
+    #
+    # if is_training:
+    #     if len(inputs.get_shape().as_list()) == 4:  # For convolutional layers
+    #         batch_mean, batch_var = tf.nn.moments(inputs, [0, 1, 2])
+    #     else:  # For fully-connected layers
+    #         batch_mean, batch_var = tf.nn.moments(inputs, [0])
+    #     train_mean = tf.assign(pop_mean, pop_mean * decay + batch_mean * (1 - decay))
+    #     train_var = tf.assign(pop_var, pop_var * decay + batch_var * (1 - decay))
+    #     with tf.control_dependencies([train_mean, train_var]):
+    #         return tf.nn.batch_normalization(inputs, batch_mean, batch_var, beta, scale, epsilon)
+    # else:
+    #     return tf.nn.batch_normalization(inputs, pop_mean, pop_var, beta, scale, epsilon)
+    return tf.keras.layers.BatchNormalization(momentum=decay, epsilon=epsilon)(inputs, training=is_training)
 
 
 def lrn(inputs, depth_radius=2, alpha=0.0001, beta=0.75, bias=1.0):
