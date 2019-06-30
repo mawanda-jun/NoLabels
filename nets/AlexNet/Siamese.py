@@ -31,9 +31,11 @@ class Siamese_AlexNet(object):
         self.train_iter = self.train_set.make_initializable_iterator()
         self.val_set = self.data_reader.generate(mode='val')
         self.val_iter = self.val_set.make_initializable_iterator()
-        self.x, self.y, self.keep_prob = self.create_placeholders()
+        self.x, self.y, self.is_train = self.create_placeholders()
+        self.dropout_rate = conf.dropout_rate
 
-        self.is_train = tf.Variable(True, trainable=False, dtype=tf.bool)
+        # self.is_train = tf.Variable(True, trainable=False, dtype=tf.bool)
+
         self.inference()
         self.configure_network()
 
@@ -44,12 +46,10 @@ class Siamese_AlexNet(object):
             # create iterator to feed the net with values from "get_next"
             # Before train and evaluation self.iter will change and so will the referring dataset
             self.handle_iter = tf.data.Iterator.from_string_handle(self.handle, self.train_set.output_types, self.train_set.output_shapes)
-            # self.iter = self.data_reader.generate('val', 'buuu').make_one_shot_iterator()
-            # self.iter = tf.data.Iterator.from_structure(self.train_set.output_types, self.train_set.output_shapes)
             x, y = self.handle_iter.get_next()
             # placeholder for keep probability in dropout layers
-            keep_prob = tf.placeholder(tf.float32, name='keep_prob')
-        return x, y, keep_prob
+            is_train = tf.placeholder(tf.bool, name='is_train')
+        return x, y, is_train
 
     def inference(self):
         # Build the Network
@@ -59,7 +59,7 @@ class Siamese_AlexNet(object):
             x = tf.unstack(self.x, axis=-1)
             for i in range(self.conf.numCrops):
                 # stacking different nets together
-                Siamese_out.append(AlexNet(x[i], self.keep_prob, self.is_train))
+                Siamese_out.append(AlexNet(x[i], self.dropout_rate, self.is_train))
                 if i < self.conf.numCrops:
                     # Share parameters defined inside <scope>.
                     # Inside AlexNet the name of the layers are defined. Every
@@ -68,15 +68,15 @@ class Siamese_AlexNet(object):
 
         net = tf.concat(Siamese_out, axis=1)
         # last layers with which we make inference
-        net = fc_layer(net, 4096, 'FC2', is_train=self.is_train, batch_norm=True, use_relu=True)
-        net = dropout(net, self.keep_prob)
+        net = fc_layer(net, 4096, 'FC2', is_train=self.is_train, batch_norm=True, use_relu=False, use_softmax=True)
+        net = dropout(net, self.dropout_rate, self.is_train)
         # logits are another name to call the labels, y or whatever
         self.logits = fc_layer(net, self.conf.hammingSetSize, 'FC3',
-                               is_train=self.is_train, batch_norm=True, use_relu=False)
+                               is_train=self.is_train, use_relu=False)
 
     def accuracy_func(self):
         with tf.name_scope('Accuracy'):
-            correct_prediction = tf.equal(tf.argmax(self.logits, 1), tf.argmax(self.y, 1))
+            correct_prediction = tf.equal(tf.math.argmax(self.logits, 1), tf.math.argmax(self.y, 1))
             accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
             self.mean_accuracy, self.mean_accuracy_op = tf.metrics.mean(accuracy)
 
@@ -114,10 +114,11 @@ class Siamese_AlexNet(object):
         print('*' * 50)
 
     def configure_summary(self):
-        # recon_img = tf.reshape(self.decoder_output, shape=(-1, self.conf.height, self.conf.width, self.conf.channel))
         summary_list = [tf.summary.scalar('Loss/total_loss', self.mean_loss),
                         tf.summary.scalar('Accuracy/accuracy', self.mean_accuracy),
-                        tf.summary.scalar('Learning_rate', self.learning_rate)]
+                        tf.summary.scalar('Learning_rate', self.learning_rate),
+                        # tf.summary.image('reconstructed', recon_img),
+                        ]
         self.merged_summary = tf.summary.merge(summary_list)
 
     def save_summary(self, summary, step, mode):
@@ -141,9 +142,9 @@ class Siamese_AlexNet(object):
         # 2. we created a tf.data.Dataset object and an iterator (self.train_iter) which can be initialized
         # 3. inside train method we prepared an handle to match the placeholder we created before. We initialize the
         #    iterator with self.train_iter.initializer;
-        # 4. we fed the handle and the keep_prob to the model;
+        # 4. we fed the handle and the dropout_rate to the model;
         # 5. we start the session with the initialization of the iterator, then we feed the net with the values it needs
-        feed_dict = {self.handle: train_handle, self.keep_prob: self.conf.keep_prob}
+        # feed_dict = {self.handle: train_handle, self.dropout_rate: self.conf.dropout_rate, self.is_train: True}
 
         if self.conf.reload_step > 0:
             self.reload(self.conf.reload_step)
@@ -154,10 +155,11 @@ class Siamese_AlexNet(object):
         print('*' * 50)
         print('----> Start Training')
         print('*' * 50)
-        # provide the network the iterators and the keep_prob we defined before (why the hell? We should put keep_prob outside)
+        # provide the network the iterators and the dropout_rate we defined before (why the hell? We should put dropout_rate outside)
         self.sess.run(train_init_op)
         for epoch in range(self.global_step_int+1, self.conf.max_epoch):
-            self.is_train = True
+            feed_dict = {self.handle: train_handle, self.is_train: True}
+            # self.is_train = True
             for train_step in range(self.data_reader.num_train_batch):
                 summary_time = train_step % self.conf.SUMMARY_FREQ == 0
                 last_step = train_step == self.data_reader.num_train_batch - 1
@@ -179,15 +181,13 @@ class Siamese_AlexNet(object):
             self.evaluate(epoch)
 
     def evaluate(self, epoch):
-        self.is_train = False
+        # self.is_train = False
         val_handle = self.sess.run(self.val_iter.string_handle())
         val_init_op = self.val_iter.initializer
-        feed_dict = {self.handle: val_handle, self.keep_prob: 1}
+        feed_dict = {self.handle: val_handle, self.is_train: False}
         self.sess.run(tf.local_variables_initializer())
         for step in range(self.data_reader.val_batch_size):
             # as in train method
-            # feed_dict = {self.handle_iter: self.val_iter, self.keep_prob: self.conf.keep_prob}
-            # self.x, self.y = self.iter.get_next()
             self.sess.run(val_init_op)
             self.sess.run([self.mean_loss_op, self.mean_accuracy_op], feed_dict=feed_dict)
 
@@ -212,7 +212,7 @@ class Siamese_AlexNet(object):
         self.sess.run(tf.local_variables_initializer())
         for step in range(self.data_reader.num_test_batch):
             x_test, y_test = self.data_reader.generate(mode='test')
-            feed_dict = {self.x: x_test, self.y: y_test, self.keep_prob: 1}
+            feed_dict = {self.x: x_test, self.y: y_test, self.dropout_rate: 1}
             self.sess.run([self.mean_loss_op, self.mean_accuracy_op], feed_dict=feed_dict)
         test_loss, test_acc = self.sess.run([self.mean_loss, self.mean_accuracy])
         print('-' * 18 + 'Test Completed' + '-' * 18)
@@ -251,3 +251,4 @@ class Siamese_AlexNet(object):
                 return None, epoch  # dir does not exist
             else:
                 raise FileExistsError('"{}" is not empty. Please delete or move existing files to avoid overwrites.'.format(checkpoint_path))
+
