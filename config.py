@@ -42,7 +42,7 @@ flags.DEFINE_string('model', 'alexnet', 'matrix_capsule or vector_capsule or ale
 
 # hamming set
 flags.DEFINE_boolean('generateHammingSet', False, 'Generate a new HammingSet')
-flags.DEFINE_integer('hammingSetSize', 10, 'Hamming set size')
+flags.DEFINE_integer('hammingSetSize', 5, 'Hamming set size')
 flags.DEFINE_string('selectionMethod', 'max', 'max or mean')
 flags.DEFINE_string('hammingFileName', 'max_hamming_set_', 'Name of the file to be saved')
 
@@ -50,28 +50,28 @@ flags.DEFINE_string('hammingFileName', 'max_hamming_set_', 'Name of the file to 
 flags.DEFINE_integer('numCrops', 9, 'The number of jigsaw-puzzle crops')
 flags.DEFINE_integer('cellSize', 75, 'The dimensions of the jigsaw input')
 flags.DEFINE_integer('tileSize', 64, 'The dimensions of the jigsaw input')
-flags.DEFINE_integer('colorJitter', 2, 'Number of pixels for color jittering')
+flags.DEFINE_integer('colorJitter', 18, 'Number of pixels for color jittering')
 flags.DEFINE_integer('cropSize', 225, 'Size of the crop extracted from each input image')
 
 # Training logs
-flags.DEFINE_integer('max_epoch', 10000, 'maximum number of training epochs')
+flags.DEFINE_integer('max_epoch', 62000, 'maximum number of training epochs')
 flags.DEFINE_integer('SUMMARY_FREQ', 100, 'Number of step to save summary')
-flags.DEFINE_integer('VAL_FREQ', 1000, 'Number of step to evaluate the network on Validation data')
+flags.DEFINE_integer('VAL_FREQ', 10, 'Number of step to evaluate the network on Validation data')
 
 # Hyper-parameters
-flags.DEFINE_integer('batchSize', 90, 'training batch size')
-flags.DEFINE_integer('val_batch_size', 90, 'validation batch size')
-flags.DEFINE_float('init_lr', 1e-6, 'Initial l,earning dropout_rate')
+flags.DEFINE_integer('batchSize', 180, 'training batch size')
+flags.DEFINE_integer('val_batch_size', 74, 'validation batch size')  # N_val_imgs/(N_train_imgs / batchSize)
+flags.DEFINE_float('init_lr', 1e-6, 'Initial learning dropout_rate')
 flags.DEFINE_float('lr_min', 1e-8, 'Minimum learning dropout_rate')
 flags.DEFINE_float('dropout_rate', 0.5, 'Rate (== 1-keep_prob) for dropout layer')
 
 # data
-# flags.DEFINE_integer('N_train_imgs', 10000, 'Total number of training examples')
-flags.DEFINE_integer('N_train_imgs', 140000, 'Total number of training examples')
-# flags.DEFINE_integer('N_val_imgs', 4000, 'Total number of validation examples')
-flags.DEFINE_integer('N_val_imgs', 49999, 'Total number of validation examples')
-# flags.DEFINE_integer('N_test_imgs', 1000, 'Total number of test examples')
-flags.DEFINE_integer('N_test_imgs', 9998, 'Total number of test examples')
+flags.DEFINE_integer('N_train_imgs', 1000, 'Total number of training examples')
+# flags.DEFINE_integer('N_train_imgs', 140000, 'Total number of training examples')
+flags.DEFINE_integer('N_val_imgs', 400, 'Total number of validation examples')
+# flags.DEFINE_integer('N_val_imgs', 49999, 'Total number of validation examples')
+flags.DEFINE_integer('N_test_imgs', 100, 'Total number of test examples')
+# flags.DEFINE_integer('N_test_imgs', 9998, 'Total number of test examples')
 flags.DEFINE_string('data_path', 'Dataset/resources/h5_files/ILSVRC_2e5.h5', 'Data path')
 flags.DEFINE_boolean('data_augment', True, 'Adds augmentation to data')
 flags.DEFINE_integer('max_angle', 40, 'Maximum rotation angle along each axis; when applying augmentation')
