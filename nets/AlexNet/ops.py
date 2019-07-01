@@ -31,28 +31,29 @@ def bias_variable(trainable, shape):
 
 
 def conv_2d(inputs, filter_size, stride, num_filters, name, trainable=True,
-            is_train=True, batch_norm=False, add_reg=False, use_relu=True):
+            is_train=True, batch_norm=False, add_reg=False, activation='relu', padding="SAME"):
     """Create a convolution layer."""
-
     num_inChannel = inputs.get_shape().as_list()[-1]
     with tf.variable_scope(name):
         shape = [filter_size, filter_size, num_inChannel, num_filters]
+        # create weights variable to be used to share weights between crop tiles
         weights = weight_variable(trainable, shape=shape)
         tf.summary.histogram('W', weights)
         layer = tf.nn.conv2d(input=inputs,
                              filter=weights,
                              strides=[1, stride, stride, 1],
-                             padding="SAME")
-        if use_relu:
-            layer = tf.nn.relu(layer)
+                             padding=padding)
         if batch_norm:
             layer = batch_norm_wrapper(layer, is_train)
         else:
             biases = bias_variable(trainable, [num_filters])
             layer += biases
+        if activation == 'relu':
+            layer = tf.nn.relu(layer)
         if add_reg:
             tf.add_to_collection('weights', weights)
     return layer
+        # return tf.keras.layers.Conv2D(num_filters, filter_size, stride, "same", activation=activation, name=name, trainable=True)(inputs)
 
 
 def flatten_layer(layer):
@@ -62,13 +63,12 @@ def flatten_layer(layer):
         num_features = layer_shape[1:4].num_elements()
         layer_flat = tf.reshape(layer, [-1, num_features])
     return layer_flat
+        # return tf.keras.layers.Flatten()(layer)
 
 
 def fc_layer(bottom, out_dim, name, is_train=True, trainable=True,
-             batch_norm=False, add_reg=False, use_relu=True, use_softmax=False):
+             batch_norm=False, add_reg=False, activation='relu'):
     """Create a fully connected layer"""
-    if use_relu and use_softmax:
-        raise ValueError('Cannot use relu and softmax together')
     in_dim = bottom.get_shape()[1]
     with tf.variable_scope(name):
         weights = weight_variable(trainable, shape=[in_dim, out_dim])
@@ -77,24 +77,27 @@ def fc_layer(bottom, out_dim, name, is_train=True, trainable=True,
         if batch_norm:
             layer = batch_norm_wrapper(layer, is_train)
         else:
+            # it retrieves bias from other croppings. It is useful not to use batch_normalization in this way
             biases = bias_variable(trainable, [out_dim])
             layer += biases
-        if use_relu:
+        if activation == 'relu':
             layer = tf.nn.relu(layer)
-        elif use_softmax:
+        elif activation == 'softmax':
             layer = tf.nn.softmax(layer)
         if add_reg:
             tf.add_to_collection('weights', weights)
     return layer
+    #     return tf.keras.layers.Dense(out_dim, activation=activation, trainable=True)(bottom)
 
 
-def max_pool(x, ksize, stride, name):
+def max_pool(x, ksize, stride, name, padding="VALID"):
     """Create a max pooling layer."""
     return tf.nn.max_pool(x,
                           ksize=[1, ksize, ksize, 1],
                           strides=[1, stride, stride, 1],
-                          padding="SAME",
+                          padding=padding,
                           name=name)
+    # return tf.keras.layers.MaxPool2D(ksize, stride, padding='valid', name=name)(x)
 
 
 def avg_pool(x, ksize, stride, name):
@@ -108,29 +111,33 @@ def avg_pool(x, ksize, stride, name):
 
 def dropout(x, rate, is_train):
     """Create a dropout layer."""
-    return tf.keras.layers.Dropout(rate)(x, training=is_train)
-    # return tf.nn.dropout(x, dropout_rate)
+    if is_train is True:
+        return tf.nn.dropout(x, rate=rate)
+    else:
+        return x
+    # return tf.keras.layers.Dropout(rate)(x, training=is_train)
 
 
-def batch_norm_wrapper(inputs, is_training, decay=0.99, epsilon=1e-3):
-    # scale = tf.Variable(tf.ones([inputs.get_shape()[-1]]))
-    # beta = tf.Variable(tf.zeros([inputs.get_shape()[-1]]))
-    # pop_mean = tf.Variable(tf.zeros([inputs.get_shape()[-1]]), trainable=False)
-    # pop_var = tf.Variable(tf.ones([inputs.get_shape()[-1]]), trainable=False)
-    #
-    # if is_training:
-    #     if len(inputs.get_shape().as_list()) == 4:  # For convolutional layers
-    #         batch_mean, batch_var = tf.nn.moments(inputs, [0, 1, 2])
-    #     else:  # For fully-connected layers
-    #         batch_mean, batch_var = tf.nn.moments(inputs, [0])
-    #     train_mean = tf.assign(pop_mean, pop_mean * decay + batch_mean * (1 - decay))
-    #     train_var = tf.assign(pop_var, pop_var * decay + batch_var * (1 - decay))
-    #     with tf.control_dependencies([train_mean, train_var]):
-    #         return tf.nn.batch_normalization(inputs, batch_mean, batch_var, beta, scale, epsilon)
-    # else:
-    #     return tf.nn.batch_normalization(inputs, pop_mean, pop_var, beta, scale, epsilon)
-    return tf.keras.layers.BatchNormalization(momentum=decay, epsilon=epsilon)(inputs, training=is_training)
+def batch_norm_wrapper(inputs, is_train, decay=0.9, epsilon=1e-3):
+    scale = tf.Variable(tf.ones([inputs.get_shape()[-1]]))
+    beta = tf.Variable(tf.zeros([inputs.get_shape()[-1]]))
+    pop_mean = tf.Variable(tf.zeros([inputs.get_shape()[-1]]), trainable=False)
+    pop_var = tf.Variable(tf.ones([inputs.get_shape()[-1]]), trainable=False)
+
+    # if is_train:
+    if is_train is True:
+        if len(inputs.get_shape().as_list()) == 4:  # For convolutional layers
+            batch_mean, batch_var = tf.nn.moments(inputs, [0, 1, 2])
+        else:  # For fully-connected layers
+            batch_mean, batch_var = tf.nn.moments(inputs, [0])
+        train_mean = tf.assign(pop_mean, pop_mean * decay + batch_mean * (1 - decay))
+        train_var = tf.assign(pop_var, pop_var * decay + batch_var * (1 - decay))
+        with tf.control_dependencies([train_mean, train_var]):
+            return tf.nn.batch_normalization(inputs, batch_mean, batch_var, beta, scale, epsilon)
+    else:
+        return tf.nn.batch_normalization(inputs, pop_mean, pop_var, beta, scale, epsilon)
+    # return tf.keras.layers.BatchNormalization(momentum=decay, epsilon=epsilon)(inputs, training=is_train)
 
 
-def lrn(inputs, depth_radius=2, alpha=0.0001, beta=0.75, bias=1.0):
+def lrn(inputs, depth_radius=5, alpha=0.0001, beta=0.75, bias=1.0):
     return tf.nn.local_response_normalization(inputs, depth_radius=depth_radius, alpha=alpha, beta=beta, bias=bias)

@@ -33,6 +33,7 @@ class Siamese_AlexNet(object):
         self.val_iter = self.val_set.make_initializable_iterator()
         self.x, self.y, self.is_train = self.create_placeholders()
         self.dropout_rate = conf.dropout_rate
+        self.use_bn = conf.use_batch_norm
 
         # self.is_train = tf.Variable(True, trainable=False, dtype=tf.bool)
 
@@ -59,7 +60,7 @@ class Siamese_AlexNet(object):
             x = tf.unstack(self.x, axis=-1)
             for i in range(self.conf.numCrops):
                 # stacking different nets together
-                Siamese_out.append(AlexNet(x[i], self.dropout_rate, self.is_train))
+                Siamese_out.append(AlexNet(x[i], self.dropout_rate, self.is_train, self.use_bn))
                 if i < self.conf.numCrops:
                     # Share parameters defined inside <scope>.
                     # Inside AlexNet the name of the layers are defined. Every
@@ -68,11 +69,14 @@ class Siamese_AlexNet(object):
 
         net = tf.concat(Siamese_out, axis=1)
         # last layers with which we make inference
-        net = fc_layer(net, 4096, 'FC2', is_train=self.is_train, batch_norm=True, use_relu=False, use_softmax=True)
+        net = fc_layer(net, 4096, 'FC7', is_train=self.is_train, batch_norm=True)
+        if self.use_bn:
+            net = batch_norm_wrapper(net, self.is_train, decay=0.7)
         net = dropout(net, self.dropout_rate, self.is_train)
         # logits are another name to call the labels, y or whatever
-        self.logits = fc_layer(net, self.conf.hammingSetSize, 'FC3',
-                               is_train=self.is_train, use_relu=False)
+        # here we use linear activation since the loss function calculates the loss with a more efficient softmax activation
+        self.logits = fc_layer(net, self.conf.hammingSetSize, 'FC8',
+                               is_train=self.is_train, activation='linear', batch_norm=True)
 
     def accuracy_func(self):
         with tf.name_scope('Accuracy'):
@@ -101,7 +105,12 @@ class Siamese_AlexNet(object):
                                                            staircase=True)
                 self.learning_rate = tf.maximum(learning_rate, self.conf.lr_min)
             optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate)
-            self.train_op = optimizer.minimize(self.total_loss, global_step=global_step)
+            # optimizer = tf.train.AdagradOptimizer(learning_rate)
+            if self.use_bn:
+                with tf.control_dependencies(tf.get_collection(tf.GraphKeys.UPDATE_OPS)):
+                    self.train_op = optimizer.minimize(self.total_loss, global_step=global_step)
+            else:
+                self.train_op = optimizer.minimize(self.total_loss, global_step=global_step)
         self.sess.run(tf.global_variables_initializer())
         trainable_vars = tf.trainable_variables()
         self.saver = tf.train.Saver(var_list=trainable_vars, max_to_keep=1000)
@@ -178,14 +187,15 @@ class Siamese_AlexNet(object):
                           .format(epoch, (train_step+1)/self.data_reader.num_train_batch, loss, acc))
                 else:
                     _, _, _ = self.sess.run([self.train_op, self.mean_loss_op, self.mean_accuracy_op], feed_dict=feed_dict)
-            self.evaluate(epoch)
+            if epoch % self.conf.VAL_FREQ == 0:
+                self.evaluate(epoch)
 
     def evaluate(self, epoch):
         # self.is_train = False
+        self.sess.run(tf.local_variables_initializer())
         val_handle = self.sess.run(self.val_iter.string_handle())
         val_init_op = self.val_iter.initializer
         feed_dict = {self.handle: val_handle, self.is_train: False}
-        self.sess.run(tf.local_variables_initializer())
         for step in range(self.data_reader.val_batch_size):
             # as in train method
             self.sess.run(val_init_op)
