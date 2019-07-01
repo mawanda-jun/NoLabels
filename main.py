@@ -8,7 +8,7 @@ import os
 if conf.model == 'alexnet':
     from nets.AlexNet.Siamese import Siamese_AlexNet as SiameseNet
 else:
-    from nets.CapsNet.Siamese import SiameseCapsNet as SiameseNet
+    raise ValueError('Please specify "alexnet" since no other net type has been implemented yet')
 
 
 def main(_):
