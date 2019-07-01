@@ -15,7 +15,7 @@ from nets.AlexNet.ops import conv_2d, flatten_layer, fc_layer, dropout, max_pool
 from tensorflow.python.keras import layers
 
 
-def AlexNet(X, rate, is_train, use_bn):
+def AlexNet(X, rate, is_train):
     """
     It is important to call the function since the "reuse" method is not working in keras yet. This way it is supposed
     to call the class for each layer and to share weights. I stated that since the net is not exploding while calling
@@ -27,17 +27,11 @@ def AlexNet(X, rate, is_train, use_bn):
     """
     net = conv_2d(X, 11, 2, 96, 'CONV1', is_train=is_train, padding="VALID")
     net = max_pool(net, 3, 2, 'MaxPool1')
-    if use_bn:
-        net = batch_norm_wrapper(net, is_train, decay=0.7)
-    else:
-        net = lrn(net)
+    net = lrn(net)
 
     net = conv_2d(net, 5, 2, 256, 'CONV2', is_train=is_train)
     net = max_pool(net, 3, 2, 'MaxPool2')
-    if use_bn:
-        net = batch_norm_wrapper(net, is_train, decay=0.7)
-    else:
-        net = lrn(net)
+    net = lrn(net)
 
     net = conv_2d(net, 3, 1, 384, 'CONV3', is_train=is_train)
     net = conv_2d(net, 3, 1, 384, 'CONV4', is_train=is_train)

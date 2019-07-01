@@ -53,7 +53,6 @@ def conv_2d(inputs, filter_size, stride, num_filters, name, trainable=True,
         if add_reg:
             tf.add_to_collection('weights', weights)
     return layer
-        # return tf.keras.layers.Conv2D(num_filters, filter_size, stride, "same", activation=activation, name=name, trainable=True)(inputs)
 
 
 def flatten_layer(layer):
@@ -63,7 +62,6 @@ def flatten_layer(layer):
         num_features = layer_shape[1:4].num_elements()
         layer_flat = tf.reshape(layer, [-1, num_features])
     return layer_flat
-        # return tf.keras.layers.Flatten()(layer)
 
 
 def fc_layer(bottom, out_dim, name, is_train=True, trainable=True,
@@ -87,7 +85,6 @@ def fc_layer(bottom, out_dim, name, is_train=True, trainable=True,
         if add_reg:
             tf.add_to_collection('weights', weights)
     return layer
-    #     return tf.keras.layers.Dense(out_dim, activation=activation, trainable=True)(bottom)
 
 
 def max_pool(x, ksize, stride, name, padding="VALID"):
@@ -97,7 +94,6 @@ def max_pool(x, ksize, stride, name, padding="VALID"):
                           strides=[1, stride, stride, 1],
                           padding=padding,
                           name=name)
-    # return tf.keras.layers.MaxPool2D(ksize, stride, padding='valid', name=name)(x)
 
 
 def avg_pool(x, ksize, stride, name):
@@ -115,7 +111,6 @@ def dropout(x, rate, is_train):
         return tf.nn.dropout(x, rate=rate)
     else:
         return x
-    # return tf.keras.layers.Dropout(rate)(x, training=is_train)
 
 
 def batch_norm_wrapper(inputs, is_train, decay=0.9, epsilon=1e-3):
@@ -136,7 +131,6 @@ def batch_norm_wrapper(inputs, is_train, decay=0.9, epsilon=1e-3):
             return tf.nn.batch_normalization(inputs, batch_mean, batch_var, beta, scale, epsilon)
     else:
         return tf.nn.batch_normalization(inputs, pop_mean, pop_var, beta, scale, epsilon)
-    # return tf.keras.layers.BatchNormalization(momentum=decay, epsilon=epsilon)(inputs, training=is_train)
 
 
 def lrn(inputs, depth_radius=5, alpha=0.0001, beta=0.75, bias=1.0):
