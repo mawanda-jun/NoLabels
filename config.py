@@ -54,25 +54,23 @@ flags.DEFINE_integer('colorJitter', 18, 'Number of pixels for color jittering')
 flags.DEFINE_integer('cropSize', 225, 'Size of the crop extracted from each input image')
 
 # Training logs
-flags.DEFINE_integer('max_epoch', 62000, 'maximum number of training epochs')
+flags.DEFINE_integer('max_epoch', 26000, 'maximum number of training epochs')  # with this configuration this is the number of iterations
+# to reach in order to solve 69 puzzles per image
 flags.DEFINE_integer('SUMMARY_FREQ', 100, 'Number of step to save summary')
-flags.DEFINE_integer('VAL_FREQ', 10, 'Number of step to evaluate the network on Validation data')
+flags.DEFINE_integer('VAL_FREQ', 1, 'Number of step to evaluate the network on Validation data')
 
 # Hyper-parameters
 flags.DEFINE_integer('batchSize', 180, 'training batch size')
-flags.DEFINE_integer('val_batch_size', 74, 'validation batch size')  # N_val_imgs/(N_train_imgs / batchSize)
-flags.DEFINE_float('init_lr', 1e-6, 'Initial learning dropout_rate')
-flags.DEFINE_float('lr_min', 1e-8, 'Minimum learning dropout_rate')
+flags.DEFINE_integer('val_batch_size', 64, 'validation batch size')  # N_val_imgs/(N_train_imgs / batchSize)
+flags.DEFINE_float('init_lr', 1e-3, 'Initial learning dropout_rate')
+flags.DEFINE_float('lr_min', 1e-6, 'Minimum learning dropout_rate')
 flags.DEFINE_float('dropout_rate', 0.5, 'Rate (== 1-keep_prob) for dropout layer')
 
 # data
-flags.DEFINE_integer('N_train_imgs', 1000, 'Total number of training examples')
-# flags.DEFINE_integer('N_train_imgs', 140000, 'Total number of training examples')
-flags.DEFINE_integer('N_val_imgs', 400, 'Total number of validation examples')
-# flags.DEFINE_integer('N_val_imgs', 49999, 'Total number of validation examples')
-flags.DEFINE_integer('N_test_imgs', 100, 'Total number of test examples')
-# flags.DEFINE_integer('N_test_imgs', 9998, 'Total number of test examples')
-flags.DEFINE_string('data_path', 'Dataset/resources/h5_files/ILSVRC_2e5.h5', 'Data path')
+flags.DEFINE_integer('N_train_imgs', 70000, 'Total number of training examples')
+flags.DEFINE_integer('N_val_imgs', 25000, 'Total number of validation examples')
+flags.DEFINE_integer('N_test_imgs', 5000, 'Total number of test examples')
+flags.DEFINE_string('data_path', 'Dataset/resources/h5_files/ILSVRC_1e5.h5', 'Data path')
 flags.DEFINE_boolean('data_augment', True, 'Adds augmentation to data')
 flags.DEFINE_integer('max_angle', 40, 'Maximum rotation angle along each axis; when applying augmentation')
 flags.DEFINE_integer('height', 64, 'Input height size')

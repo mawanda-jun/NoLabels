@@ -46,9 +46,13 @@ class CropsGenerator:
         self.numClasses = conf.hammingSetSize  # number of different jigsaw classes
 
         # shapes of datasets (train, validation, test):
-        # (140000, 256, 256, 3)
-        # (49999, 256, 256, 3)
-        # (9998, 256, 256, 3)
+        # (70000, 256, 256, 3)
+        # (25000, 256, 256, 3)
+        # (5000, 256, 256, 3)
+        # do not retrieve info about dataset with h5f['train_img'][:].shape since it loads the whole dataset into RAM
+        # N_train_img = self.img_generator.h5f['train_dim'][:].astype(np.int32)
+        # N_val_img = self.img_generator.h5f['val_dim'][:].astype(np.int32)
+        # N_test_img = self.img_generator.h5f['test_dim'][:].astype(np.int32)
         self.num_train_batch = conf.N_train_imgs // self.batchSize
         self.num_val_batch = conf.N_val_imgs // self.batchSize
         self.num_test_batch = conf.N_test_imgs // self.batchSize

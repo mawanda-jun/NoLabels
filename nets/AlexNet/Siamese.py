@@ -92,7 +92,6 @@ class Siamese_AlexNet(object):
                 global_step = tf.get_variable('global_step', [], initializer=tf.constant_initializer(self.global_step_int),
                                               trainable=False)
                 steps_per_epoch = self.conf.N_train_imgs // self.conf.batchSize
-                # steps_per_epoch = self.data_reader.num_train_batch
                 learning_rate = tf.train.exponential_decay(self.conf.init_lr,
                                                            global_step,
                                                            steps_per_epoch,
@@ -100,7 +99,6 @@ class Siamese_AlexNet(object):
                                                            staircase=True)
                 self.learning_rate = tf.maximum(learning_rate, self.conf.lr_min)
             optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate)
-            # optimizer = tf.train.AdagradOptimizer(learning_rate)
             self.train_op = optimizer.minimize(self.total_loss, global_step=global_step)
         self.sess.run(tf.global_variables_initializer())
         trainable_vars = tf.trainable_variables()
@@ -174,7 +172,7 @@ class Siamese_AlexNet(object):
                     loss, acc = self.sess.run([self.mean_loss, self.mean_accuracy])
                     global_step = (epoch - 1) * self.data_reader.num_train_batch + train_step
                     self.save_summary(summary, global_step, mode='train')
-                    print('epoch {0}|{1:.01%},\ttrain_loss: {2:.4f}, train_acc: {3:.01%}'
+                    print('epoch {0}|{1:.01%},\t\ttrain_loss: {2:.4f}, train_acc: {3:.01%}'
                           .format(epoch, (train_step+1)/self.data_reader.num_train_batch, loss, acc))
                 else:
                     _, _, _ = self.sess.run([self.train_op, self.mean_loss_op, self.mean_accuracy_op], feed_dict=feed_dict)
@@ -182,7 +180,6 @@ class Siamese_AlexNet(object):
                 self.evaluate(epoch)
 
     def evaluate(self, epoch):
-        # self.is_train = False
         self.sess.run(tf.local_variables_initializer())
         val_handle = self.sess.run(self.val_iter.string_handle())
         val_init_op = self.val_iter.initializer

@@ -132,12 +132,12 @@ def generate_h5py(file_list: List, img_size=256, hdf5_file_name: str = 'data', t
     # make train, validation and test partitions
     n = len(file_list)
     train_i = [0, int(train_dim*n)]
-    val_i = [int(train_dim*n) + 1, int((train_dim+val_dim)*n)]
-    test_i = [int((train_dim+val_dim)*n)+1, -1]
+    val_i = [int(train_dim*n), int((train_dim+val_dim)*n)]
+    test_i = [int((train_dim+val_dim)*n), -1]
     file_dict = {
         'train': file_list[train_i[0]:train_i[1]],
         'val': file_list[val_i[0]:val_i[1]],
-        'test': file_list[test_i[0]:test_i[1]]
+        'test': file_list[test_i[0]:]
     }
 
     # it is better to keep validation dataset bigger than test one
@@ -152,7 +152,9 @@ def generate_h5py(file_list: List, img_size=256, hdf5_file_name: str = 'data', t
         hdf5_out.create_dataset('test_img', (len(file_dict['test']), img_size, img_size, 3), np.uint8)
         hdf5_out.create_dataset('train_mean', (img_size, img_size, 3), np.float32)
         hdf5_out.create_dataset('train_std', (img_size, img_size, 3), np.float32)
-        # TODO: inserire anche le dimensioni rispettive, cosi' poi non c'e' bisogno di aprire tutto il file per recuperarle
+        hdf5_out.create_dataset('train_dim', (1, 1), np.int32, data=int(n*train_dim))
+        hdf5_out.create_dataset('val_dim', (1, 1), np.int32, data=int(n*val_dim))
+        hdf5_out.create_dataset('test_dim', (1, 1), np.int32, data=int(n*(1-train_dim-val_dim)))
         # make one thread for <set_type>
         threaded_types = []
         for set_type, img_list in file_dict.items():
@@ -178,9 +180,9 @@ def generate_h5py(file_list: List, img_size=256, hdf5_file_name: str = 'data', t
 
 if __name__ == '__main__':
     output_path = os.path.join(os.getcwd(), 'resources')
-    elements = int(2e5)
-    res_path = os.path.join('C:\\Users\\giova\\Desktop\\ILSVRC\\Data\\CLS-LOC')
+    elements = int(1e5)  # number of images to keep
+    res_path = os.path.join('C:\\Users\\giova\\Desktop\\CLS-LOC')
     images_list = images_in_paths(os.path.join(res_path))
     random.shuffle(images_list)
     images_list = images_list[0:elements]
-    generate_h5py(images_list, 256, 'ILSVRC_2e5.h5', folder=os.path.join(output_path, 'h5_files'))
+    generate_h5py(images_list, 256, 'ILSVRC_1e5.h5', folder=os.path.join(output_path, 'h5_files'))
