@@ -2,6 +2,9 @@ import numpy as np
 import h5py
 import random
 import tensorflow as tf
+from config import conf
+import os
+from PIL import Image
 
 
 class H5Generator:
@@ -123,8 +126,8 @@ class CropsGenerator:
             x = np.concatenate([x, x, x], axis=-1)
 
         # make the image distant from std deviation of the dataset
-        x -= self.meanTensor
-        x /= self.stdTensor
+        x -= self.meanTensor  # TODO: UNCOMMENT
+        x /= self.stdTensor  # TODO: UNCOMMENT
 
         # create <numCrops> long array for every tile of one image
         tile = np.empty((self.tileSize, self.tileSize, self.numChannels), np.float32)
@@ -183,6 +186,8 @@ class CropsGenerator:
         """
         Spatial image jitter, aka movement of color channel in various manners
         """
+        if self.colorJitter == 0:
+            return img
         r_jit = random.randrange(-self.colorJitter, self.colorJitter)
         g_jit = random.randrange(-self.colorJitter, self.colorJitter)
         b_jit = random.randrange(-self.colorJitter, self.colorJitter)
@@ -202,3 +207,40 @@ def norm(x: tf.Tensor, y: tf.Tensor) -> (tf.Tensor, tf.Tensor):
         tf.subtract(x, tf.reduce_min(x)),
         tf.subtract(tf.reduce_max(x), tf.reduce_min(x)))
     return x, y
+
+
+# if __name__ == '__main__':
+    # os.chdir(os.pardir)
+    # with h5py.File(os.path.join('Dataset', conf.resources, conf.hammingFileName + str(conf.hammingSetSize) + '.h5'), 'r') as h5f:
+    #     HammingSet = np.array(h5f['max_hamming_set'])
+
+    # dataset = CropsGenerator(conf, HammingSet)
+    # generator = H5Generator(conf.data_path)
+    # for img in generator('train_img'):
+    #     Image.fromarray(img).show()
+    #     input()
+    # mean = dataset.meanTensor
+    # std = dataset.stdTensor
+    # for img, label in dataset.yield_cropped_images():
+    #     image = img
+    #     Image.fromarray(np.array(image[:, :, :, 0], dtype=np.uint8)).show()
+    #     input()
+    # complete = np.zeros((192, 192, 3))
+    # complete[0:64, 0:64] = image[:, :, :, 0]
+    # complete[0:64, 64:128] = image[:, :, :, 1]
+    # complete[0:64, 128:192] = image[:, :, :, 2]
+    # complete[64:128, 0:64] = image[:, :, :, 3]
+    # complete[64:128, 64:128] = image[:, :, :, 4]
+    # complete[64:128, 128:192] = image[:, :, :, 5]
+    # complete[128:192, 0:64] = image[:, :, :, 6]
+    # complete[128:192, 64:128] = image[:, :, :, 7]
+    # complete[128:192, 128:192] = image[:, :, :, 8]
+    # # img1 = (image[:, :, :, 1] + mean)*std
+    # # img = image[:, :, :, 0]
+    # # img += img.min()
+    # # img *=
+    # complete += complete.min()
+    # complete *= (255.0/complete.max())
+    # complete = np.array(complete, dtype=np.uint8)
+    # img1 = Image.fromarray(complete)
+    # img1.show()
