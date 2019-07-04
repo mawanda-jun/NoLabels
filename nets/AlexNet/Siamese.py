@@ -15,10 +15,10 @@ from nets.AlexNet.AlexNet import AlexNet
 import numpy as np
 from Dataset.crops_generator_TF import CropsGenerator
 import os
+import logging
 
 
 class Siamese_AlexNet(object):
-
     def __init__(self, sess, conf, hamming_set):
         self.sess = sess
         self.conf = conf
@@ -106,10 +106,8 @@ class Siamese_AlexNet(object):
         self.train_writer = tf.summary.FileWriter(self.conf.logdir + self.conf.run_name + '/train/', self.sess.graph)
         self.valid_writer = tf.summary.FileWriter(self.conf.logdir + self.conf.run_name + '/valid/')
         self.configure_summary()
-        print('*' * 50)
-        print('Total number of trainable parameters: {}'.
+        logging.info('Total number of trainable parameters: {}'.
               format(np.sum([np.prod(v.get_shape().as_list()) for v in tf.trainable_variables()])))
-        print('*' * 50)
 
     def configure_summary(self):
         summary_list = [tf.summary.scalar('Loss/total_loss', self.mean_loss),
@@ -146,13 +144,8 @@ class Siamese_AlexNet(object):
 
         if self.conf.reload_step > 0:
             self.reload(self.conf.reload_step)
-            print('*' * 50)
-            print('----> Continue Training from step #{}'.format(self.conf.reload_step))
-            print('*' * 50)
-
-        print('*' * 50)
-        print('----> Start Training')
-        print('*' * 50)
+            logging.info('----> Continue Training from step #{}'.format(self.conf.reload_step))
+        logging.info('----> Start Training')
         # provide the network the iterators and the dropout_rate we defined before (why the hell? We should put dropout_rate outside)
         self.sess.run(train_init_op)
         for epoch in range(self.global_step_int+1, self.conf.max_epoch):
@@ -172,7 +165,7 @@ class Siamese_AlexNet(object):
                     loss, acc = self.sess.run([self.mean_loss, self.mean_accuracy])
                     global_step = (epoch - 1) * self.data_reader.num_train_batch + train_step
                     self.save_summary(summary, global_step, mode='train')
-                    print('epoch {0}|{1:.01%},\t\ttrain_loss: {2:.4f}, train_acc: {3:.01%}'
+                    logging.info('epoch {0}|{1:.01%},\t\ttrain_loss: {2:.4f}, train_acc: {3:.01%}'
                           .format(epoch, (train_step+1)/self.data_reader.num_train_batch, loss, acc))
                 else:
                     _, _, _ = self.sess.run([self.train_op, self.mean_loss_op, self.mean_accuracy_op], feed_dict=feed_dict)
@@ -198,10 +191,8 @@ class Siamese_AlexNet(object):
             improved_str = '(improved)'
         else:
             improved_str = ''
-        print('-' * 20 + 'Validation' + '-' * 20)
-        print('After {0} epoch: val_loss: {1:.4f}, val_acc: {2:.01%} {3}'.
+        logging.info('After {0} epoch: val_loss: {1:.4f}, val_acc: {2:.01%} {3}'.
               format(epoch, valid_loss, valid_acc, improved_str))
-        print('-' * 50)
 
     def test(self, epoch_num):
         self.reload(epoch_num)
@@ -213,23 +204,19 @@ class Siamese_AlexNet(object):
             feed_dict = {self.x: x_test, self.y: y_test, self.dropout_rate: 1}
             self.sess.run([self.mean_loss_op, self.mean_accuracy_op], feed_dict=feed_dict)
         test_loss, test_acc = self.sess.run([self.mean_loss, self.mean_accuracy])
-        print('-' * 18 + 'Test Completed' + '-' * 18)
-        print('test_loss= {0:.4f}, test_acc={1:.01%}'.
+        logging.info('test_loss= {0:.4f}, test_acc={1:.01%}'.
               format(test_loss, test_acc))
-        print('-' * 50)
 
     def save(self, epoch):
-        print('*' * 50)
-        print('----> Saving the model after epoch #{0}'.format(epoch))
-        print('*' * 50)
+        logging.info('----> Saving the model after epoch #{0}'.format(epoch))
         checkpoint_path = os.path.join(self.conf.modeldir+self.conf.run_name, self.conf.model_name)
         self.saver.save(self.sess, checkpoint_path, global_step=epoch)
 
     def reload(self, epoch):
         model_path, _ = self.check_if_model_exists(epoch)
-        print('----> Restoring the model...')
+        logging.info('----> Restoring the model...')
         self.saver.restore(self.sess, model_path)
-        print('----> Model-{} successfully restored'.format(epoch))
+        logging.info('----> Model-{} successfully restored'.format(epoch))
 
     def check_if_model_exists(self, epoch: int) -> (str, int):
         """
