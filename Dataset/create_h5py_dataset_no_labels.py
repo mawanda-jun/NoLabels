@@ -15,14 +15,23 @@ def square_img(im: Image.Image) -> Image:
     :param im:
     :return:
     """
-    mx = max(im.size)
-    mn = min(im.size)
-    if mx == mn:
+    w, h = im.size
+    if w == h:
         return im
-    crop_shift = random.randrange(mx-mn)
-    im = im.crop(
-        (0, crop_shift, mn, mx + crop_shift))
-
+    crop_shift = random.randrange(abs(h-w))  # crops only in the dimension that is bigger!
+    if w > h:
+        # left-upper, right-lower
+        # box dimension must be that way
+        box = [0, 0, h, h]
+        # and it may be moved horizontally
+        box[0] += crop_shift
+        box[2] += crop_shift
+    else:
+        # moving box vertically
+        box = [0, 0, w, w]
+        box[1] += crop_shift
+        box[3] += crop_shift
+    im = im.crop(box)
     return im
 
 
@@ -57,9 +66,7 @@ class ThreadedH5pyFile(threading.Thread):
                 img = Image.open(path)
                 # in case of b/w images it doesn't breaks the line
                 if img.mode == 'RGB':
-                    # CHECK IF NECESSARY
                     img = square_img(img)
-
                     img = img.resize((self.img_size, self.img_size), resample=Image.LANCZOS)
                     # convert pillow image into a np array
                     np_img = np.array(img)
@@ -152,9 +159,9 @@ def generate_h5py(file_list: List, img_size=256, hdf5_file_name: str = 'data', t
         hdf5_out.create_dataset('test_img', (len(file_dict['test']), img_size, img_size, 3), np.uint8)
         hdf5_out.create_dataset('train_mean', (img_size, img_size, 3), np.float32)
         hdf5_out.create_dataset('train_std', (img_size, img_size, 3), np.float32)
-        hdf5_out.create_dataset('train_dim', (1, 1), np.int32, data=int(n*train_dim))
-        hdf5_out.create_dataset('val_dim', (1, 1), np.int32, data=int(n*val_dim))
-        hdf5_out.create_dataset('test_dim', (1, 1), np.int32, data=int(n*(1-train_dim-val_dim)))
+        hdf5_out.create_dataset('train_dim', (), np.int32, data=int(n*train_dim))
+        hdf5_out.create_dataset('val_dim', (), np.int32, data=int(n*val_dim))
+        hdf5_out.create_dataset('test_dim', (), np.int32, data=int(n*(1-train_dim-val_dim)))
         # make one thread for <set_type>
         threaded_types = []
         for set_type, img_list in file_dict.items():
@@ -181,7 +188,7 @@ def generate_h5py(file_list: List, img_size=256, hdf5_file_name: str = 'data', t
 if __name__ == '__main__':
     output_path = os.path.join(os.getcwd(), 'resources')
     elements = int(1e5)  # number of images to keep
-    res_path = os.path.join('C:\\Users\\giova\\Desktop\\CLS-LOC')
+    res_path = os.path.join('E:\\dataset\\images_only')
     images_list = images_in_paths(os.path.join(res_path))
     random.shuffle(images_list)
     images_list = images_list[0:elements]
