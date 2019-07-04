@@ -2,9 +2,9 @@ import numpy as np
 import h5py
 import random
 import tensorflow as tf
-from config import conf
-import os
-from PIL import Image
+# from config import conf
+# import os
+# from PIL import Image
 
 
 class H5Generator:
@@ -126,8 +126,8 @@ class CropsGenerator:
             x = np.concatenate([x, x, x], axis=-1)
 
         # make the image distant from std deviation of the dataset
-        x -= self.meanTensor  # TODO: UNCOMMENT
-        x /= self.stdTensor  # TODO: UNCOMMENT
+        x -= self.meanTensor
+        x /= self.stdTensor
 
         # create <numCrops> long array for every tile of one image
         tile = np.empty((self.tileSize, self.tileSize, self.numChannels), np.float32)
@@ -164,7 +164,7 @@ class CropsGenerator:
             yield np.transpose(np.array(X), axes=[1, 2, 3, 0]), self.one_hot(y)
 
     def generate(self, mode='train'):
-        norm_func = lambda x, y: norm(x, y)
+        # norm_func = lambda x, y: norm(x, y)
         if mode == 'val':
             batch_size = self.val_batch_size
         else:
@@ -201,12 +201,12 @@ class CropsGenerator:
         ))
 
 
-def norm(x: tf.Tensor, y: tf.Tensor) -> (tf.Tensor, tf.Tensor):
-    # x = tf.to_float(x)
-    x = tf.math.divide(
-        tf.subtract(x, tf.reduce_min(x)),
-        tf.subtract(tf.reduce_max(x), tf.reduce_min(x)))
-    return x, y
+# def norm(x: tf.Tensor, y: tf.Tensor) -> (tf.Tensor, tf.Tensor):
+#     # x = tf.to_float(x)
+#     x = tf.math.divide(
+#         tf.subtract(x, tf.reduce_min(x)),
+#         tf.subtract(tf.reduce_max(x), tf.reduce_min(x)))
+#     return x, y
 
 
 # if __name__ == '__main__':
