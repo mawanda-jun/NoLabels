@@ -66,12 +66,12 @@ class Siamese_AlexNet(object):
 
         net = tf.concat(Siamese_out, axis=1)
         # last layers with which we make inference
-        net = fc_layer(net, 4096, 'FC7', is_train=self.is_train, batch_norm=True)
+        net = fc_layer(net, 4096, 'FC7', is_train=self.is_train, batch_norm=True, activation='softmax')
         net = dropout(net, self.dropout_rate, self.is_train)
         # logits are another name to call the labels, y or whatever
         # here we use linear activation since the loss function calculates the loss with a more efficient softmax activation
         self.logits = fc_layer(net, self.conf.hammingSetSize, 'FC8',
-                               is_train=self.is_train, activation='linear', batch_norm=True)
+                               is_train=self.is_train, activation='linear')
 
     def accuracy_func(self):
         with tf.name_scope('Accuracy'):
