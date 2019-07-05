@@ -165,7 +165,7 @@ class Siamese_AlexNet(object):
                     loss, acc = self.sess.run([self.mean_loss, self.mean_accuracy])
                     global_step = (epoch - 1) * self.data_reader.num_train_batch + train_step
                     self.save_summary(summary, global_step, mode='train')
-                    logging.info('epoch {0}|{1:.01%},\t\ttrain_loss: {2:.4f}, train_acc: {3:.01%}'
+                    logging.info('epoch {0}|{1:.01%},  \ttrain_loss: {2:.4f}, train_acc: {3:.01%}'
                           .format(epoch, (train_step+1)/self.data_reader.num_train_batch, loss, acc))
                 else:
                     _, _, _ = self.sess.run([self.train_op, self.mean_loss_op, self.mean_accuracy_op], feed_dict=feed_dict)
