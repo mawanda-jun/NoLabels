@@ -6,7 +6,7 @@ from inspect import signature
 
 class AlexNet(tf.keras.Model):
     """
-    Create a super-layer made up of "Alex". Alex is now a callable layer
+    Create a super-layer made up of "Alex". self.alexnet is a list of layers to be built
     """
     def __init__(self, dropout_rate):
         super(AlexNet, self).__init__()
@@ -28,8 +28,19 @@ class AlexNet(tf.keras.Model):
         ]
 
     def call(self, inputs, training=None, mask=None):
-        x = self.alexnet[0](inputs)
+        """
+        Define call function: this is what is called when the object is called in that way:
+        i = <instance_of_object>
+        result = i(x)
+        :param inputs:
+        :param training:
+        :param mask:
+        :return:
+        """
+        x = self.alexnet[0](inputs)  # compute first output
         for layer in self.alexnet[1:]:
+            # invoke every layer with the output. We need to check the signature of every layer: dropout accept also the
+            # 'training' parameter, which deactivate the layer in case of validation or test
             if 'training' not in str(signature(layer.call)):
                 x = layer(x)
             else:
@@ -38,13 +49,18 @@ class AlexNet(tf.keras.Model):
 
 
 class Siamese(tf.keras.Model):
+    """
+    Define a Siamese object, on which we can do inference and prediction.
+    """
     def __init__(self, dropout_rate, num_classes):
         super(Siamese, self).__init__()
         self.alex = AlexNet(dropout_rate)
+        # generate instances of the same AlexNet object. In this way the weights are shared
         self.alex_block = [self.alex for _ in range(9)]
+        # create last layers. We create them here so they are counted in model.summary() method
         self.dense = layers.Dense(4096, activation='relu', name='FC7')
+        self.dropout = layers.Dropout(dropout_rate, name='last_dropout')
         self.classifier = layers.Dense(num_classes, name='FC8')
-        self.dropout_rate = dropout_rate
 
     def call(self, inputs, training=None, mask=None):
         """
@@ -62,7 +78,7 @@ class Siamese(tf.keras.Model):
         siamese_block = tf.concat(alexes, axis=1)
 
         x = self.dense(siamese_block)
-        x = layers.Dropout(self.dropout_rate)(x, training)
+        x = self.dropout(x, training)
         return self.classifier(x)
 
 
