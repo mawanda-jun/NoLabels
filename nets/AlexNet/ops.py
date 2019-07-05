@@ -64,20 +64,17 @@ def flatten_layer(layer):
     return layer_flat
 
 
-def fc_layer(bottom, out_dim, name, is_train=True, trainable=True,
-             batch_norm=False, add_reg=False, activation='relu'):
+def fc_layer(bottom, out_dim, name, is_train=True, trainable=True, add_reg=False, activation='relu'):
     """Create a fully connected layer"""
     in_dim = bottom.get_shape()[1]
     with tf.variable_scope(name):
         weights = weight_variable(trainable, shape=[in_dim, out_dim])
         tf.summary.histogram('W', weights)
         layer = tf.matmul(bottom, weights)
-        if batch_norm:
-            layer = batch_norm_wrapper(layer, is_train)
-        else:
-            # it retrieves bias from other croppings. It is useful not to use batch_normalization in this way
-            biases = bias_variable(trainable, [out_dim])
-            layer += biases
+
+        # it retrieves bias from other croppings.
+        biases = bias_variable(trainable, [out_dim])
+        layer += biases
         if activation == 'relu':
             layer = tf.nn.relu(layer)
         elif activation == 'softmax':
@@ -113,24 +110,28 @@ def dropout(x, rate, is_train):
         return x
 
 
-def batch_norm_wrapper(inputs, is_train, decay=0.9, epsilon=1e-3):
-    scale = tf.Variable(tf.ones([inputs.get_shape()[-1]]))
-    beta = tf.Variable(tf.zeros([inputs.get_shape()[-1]]))
-    pop_mean = tf.Variable(tf.zeros([inputs.get_shape()[-1]]), trainable=False)
-    pop_var = tf.Variable(tf.ones([inputs.get_shape()[-1]]), trainable=False)
-
-    # if is_train:
-    if is_train is True:
-        if len(inputs.get_shape().as_list()) == 4:  # For convolutional layers
-            batch_mean, batch_var = tf.nn.moments(inputs, [0, 1, 2])
-        else:  # For fully-connected layers
-            batch_mean, batch_var = tf.nn.moments(inputs, [0])
-        train_mean = tf.assign(pop_mean, pop_mean * decay + batch_mean * (1 - decay))
-        train_var = tf.assign(pop_var, pop_var * decay + batch_var * (1 - decay))
-        with tf.control_dependencies([train_mean, train_var]):
-            return tf.nn.batch_normalization(inputs, batch_mean, batch_var, beta, scale, epsilon)
+def batch_norm_wrapper(inputs, is_train, momentum=0.9):
+    # scale = tf.Variable(tf.ones([inputs.get_shape()[-1]]))
+    # beta = tf.Variable(tf.zeros([inputs.get_shape()[-1]]))
+    # pop_mean = tf.Variable(tf.zeros([inputs.get_shape()[-1]]), trainable=False)
+    # pop_var = tf.Variable(tf.ones([inputs.get_shape()[-1]]), trainable=False)
+    #
+    # # if is_train:
+    # if is_train is True:
+    #     if len(inputs.get_shape().as_list()) == 4:  # For convolutional layers
+    #         batch_mean, batch_var = tf.nn.moments(inputs, [0, 1, 2])
+    #     else:  # For fully-connected layers
+    #         batch_mean, batch_var = tf.nn.moments(inputs, [0])
+    #     train_mean = tf.assign(pop_mean, pop_mean * decay + batch_mean * (1 - decay))
+    #     train_var = tf.assign(pop_var, pop_var * decay + batch_var * (1 - decay))
+    #     with tf.control_dependencies([train_mean, train_var]):
+    #         return tf.nn.batch_normalization(inputs, batch_mean, batch_var, beta, scale, epsilon)
+    # else:
+    #     return tf.nn.batch_normalization(inputs, pop_mean, pop_var, beta, scale, epsilon)
+    if momentum < 1:
+        return tf.keras.layers.BatchNormalization(momentum=momentum)(inputs, is_train)
     else:
-        return tf.nn.batch_normalization(inputs, pop_mean, pop_var, beta, scale, epsilon)
+        return inputs
 
 
 def lrn(inputs, depth_radius=5, alpha=0.0001, beta=0.75, bias=1.0):
