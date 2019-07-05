@@ -5,6 +5,7 @@ from config import conf
 import numpy as np
 import os
 from utils.logger import set_logger
+import logging
 
 if conf.model == 'alexnet':
     from nets.AlexNet.Siamese import Siamese_AlexNet as SiameseNet
@@ -28,7 +29,7 @@ def main(_):
         os.makedirs(conf.modeldir + conf.run_name, exist_ok=True)
         os.makedirs(conf.logdir + conf.run_name, exist_ok=True)
         os.makedirs(conf.savedir + conf.run_name, exist_ok=True)
-        set_logger(os.path.join(conf.modeldir + conf.run_name, 'train_validation.log'))
+        set_logger(os.path.join(os.getcwd(), 'train_val.log'))
         if conf.mode == 'train':
             model.train()
         elif conf.mode == 'test':
