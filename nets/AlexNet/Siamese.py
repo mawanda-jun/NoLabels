@@ -67,8 +67,6 @@ class Siamese_AlexNet(object):
         net = tf.concat(Siamese_out, axis=1)
         # last layers with which we make inference
         net = fc_layer(net, 4096, 'FC7', is_train=self.is_train, activation='softmax')
-        if self.conf.bn_momentum < 1:
-            net = batch_norm_wrapper(net, momentum=self.conf.bn_momentum, is_train=self.is_train)
         net = dropout(net, self.dropout_rate, self.is_train)
         # logits are another name to call the labels, y or whatever
         # here we use linear activation since the loss function calculates the loss with a more efficient softmax activation
@@ -101,12 +99,7 @@ class Siamese_AlexNet(object):
                                                            staircase=True)
                 self.learning_rate = tf.maximum(learning_rate, self.conf.lr_min)
             optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate)
-            if self.conf.bn_momentum < 1:
-                with tf.control_dependencies(tf.get_collection(tf.GraphKeys.UPDATE_OPS)):
-                    # needed to update mean and loss also with the variables of batch normalization
-                    self.train_op = optimizer.minimize(self.total_loss, global_step=global_step)
-            else:
-                self.train_op = optimizer.minimize(self.total_loss, global_step=global_step)
+            self.train_op = optimizer.minimize(self.total_loss, global_step=global_step)
         self.sess.run(tf.global_variables_initializer())
         trainable_vars = tf.trainable_variables()
         self.saver = tf.train.Saver(var_list=trainable_vars, max_to_keep=1000)
