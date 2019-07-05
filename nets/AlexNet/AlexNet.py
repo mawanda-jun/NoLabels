@@ -39,7 +39,7 @@ def AlexNet(X, rate, is_train):
     net = max_pool(net, 3, 2, 'MaxPool3')
 
     layer_flat = flatten_layer(net)
-    net = fc_layer(layer_flat, 1024, 'FC6', is_train=is_train)
+    net = fc_layer(layer_flat, 512, 'FC6', is_train=is_train)
 
     net = dropout(net, rate, is_train)
 
