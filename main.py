@@ -28,7 +28,7 @@ def main(_):
         os.makedirs(conf.modeldir + conf.run_name, exist_ok=True)
         os.makedirs(conf.logdir + conf.run_name, exist_ok=True)
         os.makedirs(conf.savedir + conf.run_name, exist_ok=True)
-        set_logger(conf.modeldir + 'train_validation.log')
+        set_logger(os.path.join(conf.modeldir + conf.run_name, 'train_validation.log'))
         if conf.mode == 'train':
             model.train()
         elif conf.mode == 'test':
