@@ -2,9 +2,9 @@ import numpy as np
 import h5py
 import random
 import tensorflow as tf
-# from config import conf
-# import os
-# from PIL import Image
+from config import conf
+import os
+from PIL import Image
 
 
 class H5Generator:
@@ -105,8 +105,7 @@ class CropsGenerator:
                 crop = image[y_start:y_start + self.tileSize, x_start:x_start + self.tileSize, :]
                 crop = self.color_channel_jitter(crop)  # jitter every image in a random way
                 final_crops[:, :, :, self.maxHammingSet[perm_index, row * crops_per_side + col]] = crop
-                # final_crops[:, :, :, self.maxHammingSet[perm_index, row * crops_per_side + col]] = \
-                #     image[y_start:y_start + self.tileSize, x_start:x_start + self.tileSize, :]
+
         return final_crops, perm_index
 
     def __single_generation_normalized(self, x: np.array):
@@ -129,15 +128,9 @@ class CropsGenerator:
         x -= self.meanTensor
         x /= self.stdTensor
 
-        # create <numCrops> long array for every tile of one image
-        tile = np.empty((self.tileSize, self.tileSize, self.numChannels), np.float32)
-        X = [tile for _ in range(self.numCrops)]
-
         tiles, y = self.create_croppings(x)
-        for position_in_crop in range(self.numCrops):
-            X[position_in_crop][:, :, :] = tiles[:, :, :, position_in_crop]
 
-        return X, y
+        return tiles, y
 
     def one_hot(self, y):
         """
@@ -147,9 +140,7 @@ class CropsGenerator:
         """
         tmp = np.zeros(self.numClasses)
         tmp[y] = 1
-        # tmp = tf.one_hot(y, self.numClasses)
         return tmp
-        # return np.array([1 if y == j else 0 for j in range(self.numClasses)])
 
     def yield_cropped_images(self, mode='train'):
         """
@@ -161,7 +152,7 @@ class CropsGenerator:
 
         for x in self.img_generator(h5f_label):
             X, y = self.__single_generation_normalized(x.astype(np.float32))
-            yield np.transpose(np.array(X), axes=[1, 2, 3, 0]), self.one_hot(y)
+            yield X, self.one_hot(y)
 
     def generate(self, mode='train'):
         # norm_func = lambda x, y: norm(x, y)
@@ -209,38 +200,45 @@ class CropsGenerator:
 #     return x, y
 
 
-# if __name__ == '__main__':
-    # os.chdir(os.pardir)
-    # with h5py.File(os.path.join('Dataset', conf.resources, conf.hammingFileName + str(conf.hammingSetSize) + '.h5'), 'r') as h5f:
-    #     HammingSet = np.array(h5f['max_hamming_set'])
-
-    # dataset = CropsGenerator(conf, HammingSet)
+if __name__ == '__main__':
+    os.chdir(os.pardir)
+    with h5py.File(os.path.join('Dataset', conf.resources, conf.hammingFileName + str(conf.hammingSetSize) + '.h5'), 'r') as h5f:
+        HammingSet = np.array(h5f['max_hamming_set'])
+    #
+    dataset = CropsGenerator(conf, HammingSet)
     # generator = H5Generator(conf.data_path)
     # for img in generator('train_img'):
     #     Image.fromarray(img).show()
     #     input()
-    # mean = dataset.meanTensor
-    # std = dataset.stdTensor
-    # for img, label in dataset.yield_cropped_images():
-    #     image = img
-    #     Image.fromarray(np.array(image[:, :, :, 0], dtype=np.uint8)).show()
-    #     input()
-    # complete = np.zeros((192, 192, 3))
-    # complete[0:64, 0:64] = image[:, :, :, 0]
-    # complete[0:64, 64:128] = image[:, :, :, 1]
-    # complete[0:64, 128:192] = image[:, :, :, 2]
-    # complete[64:128, 0:64] = image[:, :, :, 3]
-    # complete[64:128, 64:128] = image[:, :, :, 4]
-    # complete[64:128, 128:192] = image[:, :, :, 5]
-    # complete[128:192, 0:64] = image[:, :, :, 6]
-    # complete[128:192, 64:128] = image[:, :, :, 7]
-    # complete[128:192, 128:192] = image[:, :, :, 8]
-    # # img1 = (image[:, :, :, 1] + mean)*std
-    # # img = image[:, :, :, 0]
-    # # img += img.min()
-    # # img *=
+    mean = dataset.meanTensor
+    std = dataset.stdTensor
+    i=0
+    for img, label in dataset.yield_cropped_images():
+        image = img
+        # for i in range(img.shape[-1]):
+            # Image.fromarray(np.array(image[..., i], dtype=np.uint8)).show()
+            # print(i)
+        # Image.fromarray(np.array(image[:, :, :, ], dtype=np.uint8)).show()
+        if i < 0:
+            i+=1
+        else:
+            break
+    complete = np.zeros((192, 192, 3))
+    complete[0:64, 0:64] = image[:, :, :, 0]
+    complete[0:64, 64:128] = image[:, :, :, 1]
+    complete[0:64, 128:192] = image[:, :, :, 2]
+    complete[64:128, 0:64] = image[:, :, :, 3]
+    complete[64:128, 64:128] = image[:, :, :, 4]
+    complete[64:128, 128:192] = image[:, :, :, 5]
+    complete[128:192, 0:64] = image[:, :, :, 6]
+    complete[128:192, 64:128] = image[:, :, :, 7]
+    complete[128:192, 128:192] = image[:, :, :, 8]
+    # img1 = (image[:, :, :, 1] + mean)*std
+    # img = image[:, :, :, 0]
+    # img += img.min()
+    # img *=
     # complete += complete.min()
     # complete *= (255.0/complete.max())
-    # complete = np.array(complete, dtype=np.uint8)
-    # img1 = Image.fromarray(complete)
-    # img1.show()
+    complete = np.array(complete, dtype=np.uint8)
+    img1 = Image.fromarray(complete)
+    img1.show()
