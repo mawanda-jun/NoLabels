@@ -199,46 +199,49 @@ class CropsGenerator:
 #         tf.subtract(tf.reduce_max(x), tf.reduce_min(x)))
 #     return x, y
 
+# UNCOMMENT ADDITION AND DIVISION PER MEAN AND STD BEFORE TRY TO SEE IMAGES
 
-if __name__ == '__main__':
-    os.chdir(os.pardir)
-    with h5py.File(os.path.join('Dataset', conf.resources, conf.hammingFileName + str(conf.hammingSetSize) + '.h5'), 'r') as h5f:
-        HammingSet = np.array(h5f['max_hamming_set'])
-    #
-    dataset = CropsGenerator(conf, HammingSet)
-    # generator = H5Generator(conf.data_path)
-    # for img in generator('train_img'):
-    #     Image.fromarray(img).show()
-    #     input()
-    mean = dataset.meanTensor
-    std = dataset.stdTensor
-    i=0
-    for img, label in dataset.yield_cropped_images():
-        image = img
-        # for i in range(img.shape[-1]):
-            # Image.fromarray(np.array(image[..., i], dtype=np.uint8)).show()
-            # print(i)
-        # Image.fromarray(np.array(image[:, :, :, ], dtype=np.uint8)).show()
-        if i < 0:
-            i+=1
-        else:
-            break
-    complete = np.zeros((192, 192, 3))
-    complete[0:64, 0:64] = image[:, :, :, 0]
-    complete[0:64, 64:128] = image[:, :, :, 1]
-    complete[0:64, 128:192] = image[:, :, :, 2]
-    complete[64:128, 0:64] = image[:, :, :, 3]
-    complete[64:128, 64:128] = image[:, :, :, 4]
-    complete[64:128, 128:192] = image[:, :, :, 5]
-    complete[128:192, 0:64] = image[:, :, :, 6]
-    complete[128:192, 64:128] = image[:, :, :, 7]
-    complete[128:192, 128:192] = image[:, :, :, 8]
-    # img1 = (image[:, :, :, 1] + mean)*std
-    # img = image[:, :, :, 0]
-    # img += img.min()
-    # img *=
-    # complete += complete.min()
-    # complete *= (255.0/complete.max())
-    complete = np.array(complete, dtype=np.uint8)
-    img1 = Image.fromarray(complete)
-    img1.show()
+# if __name__ == '__main__':
+#     os.chdir(os.pardir)
+#     with h5py.File(os.path.join('Dataset', conf.resources, conf.hammingFileName + str(conf.hammingSetSize) + '.h5'), 'r') as h5f:
+#         HammingSet = np.array(h5f['max_hamming_set'])
+#     #
+#     dataset = CropsGenerator(conf, HammingSet)
+#     # generator = H5Generator(conf.data_path)
+#     # for img in generator('train_img'):
+#     #     Image.fromarray(img).show()
+#     #     input()
+#     mean = dataset.meanTensor
+#     std = dataset.stdTensor
+#     i=0
+#     for img, label in dataset.yield_cropped_images():
+#         image = img
+#         lbl = label
+#         # for i in range(img.shape[-1]):
+#             # Image.fromarray(np.array(image[..., i], dtype=np.uint8)).show()
+#             # print(i)
+#         # Image.fromarray(np.array(image[:, :, :, ], dtype=np.uint8)).show()
+#         if i < 7:
+#             i+=1
+#         else:
+#             break
+#     complete = np.zeros((192, 192, 3))
+#     complete[0:64, 0:64] = image[:, :, :, dataset.maxHammingSet[lbl][0]]
+#     complete[0:64, 64:128] = image[:, :, :, dataset.maxHammingSet[lbl][1]]
+#     complete[0:64, 128:192] = image[:, :, :, dataset.maxHammingSet[lbl][2]]
+#     complete[64:128, 0:64] = image[:, :, :, dataset.maxHammingSet[lbl][3]]
+#     complete[64:128, 64:128] = image[:, :, :, dataset.maxHammingSet[lbl][4]]
+#     complete[64:128, 128:192] = image[:, :, :, dataset.maxHammingSet[lbl][5]]
+#     complete[128:192, 0:64] = image[:, :, :, dataset.maxHammingSet[lbl][6]]
+#     complete[128:192, 64:128] = image[:, :, :, dataset.maxHammingSet[lbl][7]]
+#     complete[128:192, 128:192] = image[:, :, :, dataset.maxHammingSet[lbl][8]]
+#     print(dataset.maxHammingSet[lbl])
+#     # img1 = (image[:, :, :, 1] + mean)*std
+#     # img = image[:, :, :, 0]
+#     # img += img.min()
+#     # img *=
+#     # complete += complete.min()
+#     # complete *= (255.0/complete.max())
+#     complete = np.array(complete, dtype=np.uint8)
+#     img1 = Image.fromarray(complete)
+#     img1.show()
