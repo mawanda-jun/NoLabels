@@ -68,7 +68,7 @@ class Siamese_AlexNet(object):
         # last layers with which we make inference
         net = fc_layer(net, 4096, 'FC7', is_train=self.is_train, activation='softmax')
         if self.conf.bn_momentum < 1:
-            net = batch_norm_wrapper(momentum=self.conf.bn_momentum, is_train=self.is_train)
+            net = batch_norm_wrapper(net, momentum=self.conf.bn_momentum, is_train=self.is_train)
         net = dropout(net, self.dropout_rate, self.is_train)
         # logits are another name to call the labels, y or whatever
         # here we use linear activation since the loss function calculates the loss with a more efficient softmax activation
