@@ -5,7 +5,6 @@ from config import conf
 import numpy as np
 import os
 from utils.logger import set_logger
-import logging
 
 if conf.model == 'alexnet':
     from nets.AlexNet.Siamese import Siamese_AlexNet as SiameseNet
