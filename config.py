@@ -50,7 +50,7 @@ flags.DEFINE_string('hammingFileName', 'max_hamming_set_', 'Name of the file to 
 flags.DEFINE_integer('numCrops', 9, 'The number of jigsaw-puzzle crops')
 flags.DEFINE_integer('cellSize', 75, 'The dimensions of the jigsaw input')
 flags.DEFINE_integer('tileSize', 64, 'The dimensions of the jigsaw input')
-flags.DEFINE_integer('colorJitter', 5, 'Number of pixels for color jittering')
+flags.DEFINE_integer('colorJitter', 2, 'Number of pixels for color jittering')
 flags.DEFINE_integer('cropSize', 225, 'Size of the crop extracted from each input image')
 
 # Training logs
