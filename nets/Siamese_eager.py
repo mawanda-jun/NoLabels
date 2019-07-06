@@ -18,6 +18,22 @@ class AlexNet(tf.keras.layers.Layer):
         self.alexnet = []
         self.flatten_out = None
         self.config = {}
+        # trainable parameters in form of output shape for every layer in AlexNet
+        self.shapes = [
+            (11, 11, 3, 96),
+            (96,),
+            (),
+            (5, 5, 3, 256),
+            (256, ),
+            (),
+            (3, 3, 3, 384),
+            (3, 3, 3, 384),
+            (3, 3, 3, 256),
+            (),
+            (),
+            (256*6*6, 512),
+            (),
+        ]
 
     def build(self, input_shape=(-1, 64, 64, 3)):
         # self.conv1 = layers.Conv2D(96, 11, 2, 'same', activation='relu', name='CONV1', input_shape=(-1, 64, 64, 3))
@@ -35,12 +51,12 @@ class AlexNet(tf.keras.layers.Layer):
         # self.fc6 = layers.Dense(512, activation='relu', name='FC6')
         # self.dropout = layers.Dropout(0.5)
         self.alexnet = [
-            layers.Conv2D(96, 11, 2, 'same', activation='relu', name='CONV1', input_shape=(-1, 64, 64, 3)),
-            layers.BatchNormalization(name="batch_norm_1"),
+            layers.Conv2D(96, 11, 2, 'same', activation='relu', name='CONV1', input_shape=input_shape),
+            layers.BatchNormalization(momentum=0.6, name="batch_norm_1"),
             layers.MaxPool2D(3, 2, 'same', name='MaxPool1'),
 
             layers.Conv2D(256, 5, 2, 'same', activation='relu', name='CONV2'),
-            layers.BatchNormalization(name="batch_norm_2"),
+            layers.BatchNormalization(momentum=0.6, name="batch_norm_2"),
             layers.MaxPool2D(3, 2, 'same', name='MaxPool2'),
 
             layers.Conv2D(384, 3, 1, 'same', activation='relu', name='CONV3'),
@@ -52,9 +68,9 @@ class AlexNet(tf.keras.layers.Layer):
             layers.Dense(512, activation='relu', name='FC6'),
             layers.Dropout(0.5)
         ]
-
-        # useful only to retrieve param information for model.summary()
-        self.add_weight(shape=(256*6*6, 512), name='kernel')
+        for i, layer in enumerate(self.alexnet):
+            # adds the weights for model.summary(). These are not going to be trained
+            self.add_weight(name=layer.name, shape=self.shapes[i])
 
     def get_config(self):
         return self.config
@@ -71,8 +87,8 @@ class AlexNet(tf.keras.layers.Layer):
         """
         x = self.alexnet[0](inputs)  # compute first output
         for layer in self.alexnet[1:]:
-            # invoke every layer with the output. We need to check the signature of every layer: dropout accept also the
-            # 'training' parameter, which deactivate the layer in case of validation or test
+            # invoke every layer with the output. We need to check the signature of every layer: dropout and batch_norm
+            # accept also the 'training' parameter, which deactivate the layer in case of validation or test
             if 'training' not in str(signature(layer.call)):
                 x = layer(x)
             else:
@@ -93,9 +109,6 @@ class AlexNet(tf.keras.layers.Layer):
         # x = self.fc6(x)
         # x = self.dropout(x, training=training)
         # return x
-
-    def compute_output_shape(self, input_shape):
-        return 256*6*6, 512
 
 
 class Siamese(tf.keras.Model):

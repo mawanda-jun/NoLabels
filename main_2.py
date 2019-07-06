@@ -11,6 +11,8 @@ from tensorflow.python.keras.callbacks import ModelCheckpoint, CSVLogger
 from nets.Siamese_eager import Siamese
 
 tf.enable_eager_execution()
+
+
 # device = '/cpu:0' if tfe.num_gpus() == 0 else '/gpu:0'
 
 
@@ -36,6 +38,11 @@ def train():
         dummy_input = tf.zeros((1, 64, 64, 3, 9))
         model._set_inputs(dummy_input)
 
+        # create dataset lazily
+        data_reader = CropsGenerator(conf, HammingSet)
+        train_set = data_reader.generate(mode='train')
+        val_set = data_reader.generate(mode='val')
+
         # set experiment path
         os.makedirs(conf.modeldir + conf.run_name, exist_ok=True)
         os.makedirs(conf.logdir + conf.run_name, exist_ok=True)
@@ -54,7 +61,7 @@ def train():
                     model.load_weights(restore_path)
 
         # set optimizer
-        steps_per_epoch = conf.N_train_imgs // conf.batchSize
+        steps_per_epoch = data_reader.num_train_batch
         learning_rate = tf.train.exponential_decay(conf.init_lr,
                                                    conf.reload_step,
                                                    steps_per_epoch,
@@ -82,11 +89,6 @@ def train():
                                        mode='min')
         # setup callback to register training history
         csv_logger = CSVLogger('log.csv', append=True, separator=';')
-
-        # create dataset
-        data_reader = CropsGenerator(conf, HammingSet)
-        train_set = data_reader.generate(mode='train')
-        val_set = data_reader.generate(mode='val')
 
         # fit and validate model
         model.fit(
