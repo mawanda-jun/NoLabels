@@ -6,6 +6,9 @@ from config import conf
 import os
 from PIL import Image
 
+NUM_PREFETCH = tf.data.experimental.AUTOTUNE
+
+
 
 class H5Generator:
     """
@@ -168,7 +171,7 @@ class CropsGenerator:
                    # .map(norm_func, num_parallel_calls=8)
                    .batch(batch_size)
                    # .shuffle(self.img_generator.h5f[mode+'_img'].shape[0])
-                   .prefetch(1)
+                   .prefetch(NUM_PREFETCH)
                    .repeat()
                    )
         return dataset
