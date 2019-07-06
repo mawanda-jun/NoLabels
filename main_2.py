@@ -54,7 +54,13 @@ def train():
                         model.load_weights(restore_path)
 
             # set optimizer
-            optimizer = tf.train.AdamOptimizer(learning_rate=conf.init_lr)
+            steps_per_epoch = conf.N_train_imgs // conf.batchSize
+            learning_rate = tf.train.exponential_decay(conf.init_lr,
+                                                       conf.reload_step,
+                                                       steps_per_epoch,
+                                                       0.97,
+                                                       staircase=False)
+            optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate)
 
             # compile model with losses and metrics
             model.compile(
