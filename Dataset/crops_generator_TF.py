@@ -5,6 +5,8 @@ import tensorflow as tf
 from config import conf
 import os
 from PIL import Image
+# give fixed seed so we can push label and read them as integers. TODO: sistemare questo obbrobrio
+random.seed(1)
 
 AUTOTUNE = tf.data.experimental.AUTOTUNE
 
@@ -25,9 +27,9 @@ class H5Generator:
         self.h5f = h5py.File(file, 'r')  # it will be closed when the context will be terminated
 
     def __call__(self, mode, num_classes, *args, **kwargs):
-        dummy_y = 0
+        # dummy_y = 0
         for img in self.h5f[mode]:
-            yield img, dummy_y
+            yield img, int(random.randrange(num_classes))
 
 
 class CropsGenerator:
@@ -102,6 +104,8 @@ class CropsGenerator:
             crop_x, crop_y = 0, 0
 
         croppings = []
+        # for v in tf.gather(self.maxHammingSet, y):
+        #     pass
         for hm_index in self.maxHammingSet[perm_index]:
             # It's sort of the contrary wrt previous behaviour. Now we find the hm_index crop we want to locate and
             # we create its cropping. Then we stack in order, so the hamming_set order is kept.
@@ -116,7 +120,7 @@ class CropsGenerator:
             crop = self.color_channel_jitter(crop)  # jitter every x in a random way
             croppings.append(crop)
         x = tf.stack(croppings, axis=-1)
-        return x, perm_index
+        return x, y
 
     def normalize_image(self, x: tf.Tensor, y: tf.Tensor):
         """
