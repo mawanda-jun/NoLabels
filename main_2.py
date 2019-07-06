@@ -91,7 +91,6 @@ def train():
         # fit and validate model
         model.fit(
             train_set,
-            batch_size=conf.batchSize,
             epochs=conf.max_epoch,
             validation_data=val_set,
             steps_per_epoch=data_reader.num_train_batch,
