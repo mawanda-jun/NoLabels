@@ -82,9 +82,9 @@ flags.DEFINE_integer('numChannels', 3, 'Input channel size')
 # Directories and settings
 flags.DEFINE_string('resources', os.path.join('resources', 'h5_files'), 'Path to h5 files folder')
 flags.DEFINE_string('run_name', 'run01', 'Run name')
-flags.DEFINE_string('logdir', './Results/log_dir/', 'Logs directory')
-flags.DEFINE_string('modeldir', './Results/model_dir/', 'Saved models directory')
-flags.DEFINE_string('savedir', './Results/result/', 'Results saving directory')
+flags.DEFINE_string('logdir', os.path.join('Results', 'log_dir'), 'Logs directory')
+flags.DEFINE_string('modeldir', os.path.join('Results', 'model_dir'), 'Saved models directory')
+flags.DEFINE_string('savedir', os.path.join('Results', 'result'), 'Results saving directory')
 flags.DEFINE_string('model_name', 'model', 'Model file name')
 flags.DEFINE_integer('reload_step', 0, 'Reload step to continue training')
 
