@@ -1,0 +1,141 @@
+import tensorflow as tf
+from tensorflow.python.keras import layers
+from inspect import signature
+tf.enable_eager_execution()
+
+
+def loss_op(y_pred, y_true):
+    diff = tf.losses.softmax_cross_entropy(y_true, y_pred, from_logits=True)
+    return tf.reduce_mean(diff)
+
+
+class AlexNet(tf.keras.layers.Layer):
+    """
+    Create a super-layer made up of "Alex". self.alexnet is a list of layers to be built
+    """
+    def __init__(self, name, **kwargs):
+        super(AlexNet, self).__init__(name, **kwargs)
+        self.alexnet = []
+        self.flatten_out = None
+        self.config = {}
+
+    def build(self, input_shape=(-1, 64, 64, 3)):
+        # self.conv1 = layers.Conv2D(96, 11, 2, 'same', activation='relu', name='CONV1', input_shape=(-1, 64, 64, 3))
+        # self.maxpool1 = layers.MaxPool2D(3, 2, 'same', name='MaxPool1')
+        #
+        # self.conv2 = layers.Conv2D(256, 5, 2, 'same', activation='relu', name='CONV2')
+        # self.maxpool2 = layers.MaxPool2D(3, 2, 'same', name='MaxPool2')
+        #
+        # self.conv3 = layers.Conv2D(384, 3, 1, 'same', activation='relu', name='CONV3')
+        # self.conv4 = layers.Conv2D(384, 3, 1, 'same', activation='relu', name='CONV4')
+        # self.conv5 = layers.Conv2D(256, 3, 1, 'same', activation='relu', name='CONV5')
+        # self.maxpool3 = layers.MaxPool2D(3, 2, 'same', name='MaxPool3')
+        #
+        # self.flatten = layers.Flatten()
+        # self.fc6 = layers.Dense(512, activation='relu', name='FC6')
+        # self.dropout = layers.Dropout(0.5)
+        self.alexnet = [
+            layers.Conv2D(96, 11, 2, 'same', activation='relu', name='CONV1', input_shape=(-1, 64, 64, 3)),
+            layers.MaxPool2D(3, 2, 'same', name='MaxPool1'),
+
+            layers.Conv2D(256, 5, 2, 'same', activation='relu', name='CONV2'),
+            layers.MaxPool2D(3, 2, 'same', name='MaxPool2'),
+
+            layers.Conv2D(384, 3, 1, 'same', activation='relu', name='CONV3'),
+            layers.Conv2D(384, 3, 1, 'same', activation='relu', name='CONV4'),
+            layers.Conv2D(256, 3, 1, 'same', activation='relu', name='CONV5'),
+            layers.MaxPool2D(3, 2, 'same', name='MaxPool3'),
+
+            layers.Flatten(),
+            layers.Dense(512, activation='relu', name='FC6'),
+            layers.Dropout(0.5)
+        ]
+
+    def get_config(self):
+        return self.config
+
+    def call(self, inputs, training=None, mask=None):
+        """
+        Define call function: this is what is called when the object is called in that way:
+        i = <instance_of_object>
+        result = i(x)
+        :param inputs:
+        :param training:
+        :param mask:
+        :return:
+        """
+        x = self.alexnet[0](inputs)  # compute first output
+        for layer in self.alexnet[1:]:
+            # invoke every layer with the output. We need to check the signature of every layer: dropout accept also the
+            # 'training' parameter, which deactivate the layer in case of validation or test
+            if 'training' not in str(signature(layer.call)):
+                x = layer(x)
+            else:
+                x = layer(x, training)
+        return x
+        # x = self.conv1(inputs)
+        # x = self.maxpool1(x)
+        #
+        # x = self.conv2(x)
+        # x = self.maxpool2(x)
+        #
+        # x = self.conv3(x)
+        # x = self.conv4(x)
+        # x = self.conv5(x)
+        # x = self.maxpool3(x)
+        #
+        # x = self.flatten(x)
+        # x = self.fc6(x)
+        # x = self.dropout(x, training=training)
+        # return x
+
+    def compute_output_shape(self, input_shape):
+        return 256*6*6, 512
+
+
+class Siamese(tf.keras.Model):
+    """
+    Define a Siamese object, on which we can do inference and prediction.
+    """
+    def __init__(self, num_classes, **kwargs):
+        super(Siamese, self).__init__(**kwargs)
+        self.alex = AlexNet('alex')
+        # generate instances of the same AlexNet object. In this way the weights are shared
+        # self.alex_block = [self.alex for _ in range(9)]
+        # create last layers. We create them here so they are counted in model.summary() method
+        self.dense = layers.Dense(4096, activation='relu', name='FC7', input_shape=(256*6*6, 512))
+        self.dropout = layers.Dropout(0.5, name='last_dropout')
+        self.classifier = layers.Dense(num_classes, activation='softmax', name='FC8')
+
+    def call(self, inputs, training=None, mask=None):
+        """
+        inputs is now a stack of tiles. we need to unstack them, to feed the self.alex and to collect all outputs
+        :param inputs:
+        :param training:
+        :param mask:
+        :return:
+        """
+        alex_block = [self.alex for _ in range(9)]
+        x = tf.unstack(inputs, axis=-1)
+        alexes = []
+        for i in range(9):
+            # it should reuse the variables inside alex_block
+            alexes.append(alex_block[i](x[i], training))
+        siamese_block = tf.concat(alexes, axis=1)
+
+        x = self.dense(siamese_block)
+        x = self.dropout(x, training)
+        logits = self.classifier(x)
+        return logits
+
+
+if __name__ == '__main__':
+    model = Siamese(num_classes=5)
+    dummy_x = tf.zeros((1, 64, 64, 3, 9))
+    model._set_inputs(dummy_x)
+    model.compile(optimizer=tf.train.AdamOptimizer(0.001),
+                  loss='categorical_crossentropy',
+                  metrics=['categorical_accuracy'])
+
+    model.summary()
+
