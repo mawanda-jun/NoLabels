@@ -52,6 +52,7 @@ flags.DEFINE_integer('cellSize', 75, 'The dimensions of the jigsaw input')
 flags.DEFINE_integer('tileSize', 64, 'The dimensions of the jigsaw input')
 flags.DEFINE_integer('colorJitter', 2, 'Number of pixels for color jittering')
 flags.DEFINE_integer('cropSize', 225, 'Size of the crop extracted from each input image')
+flags.DEFINE_integer('original_dim', 256, 'Size of the input image')
 
 # Training logs
 flags.DEFINE_integer('max_epoch', 26000, 'maximum number of training epochs')  # with this configuration this is the number of iterations

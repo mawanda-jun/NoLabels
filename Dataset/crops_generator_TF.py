@@ -6,8 +6,7 @@ from config import conf
 import os
 from PIL import Image
 
-NUM_PREFETCH = tf.data.experimental.AUTOTUNE
-
+AUTOTUNE = tf.data.experimental.AUTOTUNE
 
 
 class H5Generator:
@@ -25,20 +24,23 @@ class H5Generator:
         """
         self.h5f = h5py.File(file, 'r')  # it will be closed when the context will be terminated
 
-    def __call__(self, mode, *args, **kwargs):
+    def __call__(self, mode, num_classes, *args, **kwargs):
+        dummy_y = 0
         for img in self.h5f[mode]:
-            yield img
+            yield img, dummy_y
 
 
 class CropsGenerator:
     """
     Read HD5F file, one batch at a time, and serve a jigsaw puzzle.
     """
+
     def __init__(self, conf, max_hamming_set):
         self.data_path = conf.data_path  # path to hd5f file
         self.img_generator = H5Generator(self.data_path)
         self.numChannels = conf.numChannels  # num of input image channels
         self.numCrops = conf.numCrops  # num of jigsaw crops
+        self.original_dim = conf.original_dim  # size of the input image
         self.cropSize = conf.cropSize  # size of crop (255)
         self.cellSize = conf.cellSize  # size of each cell (75)
         self.tileSize = conf.tileSize  # size of tile in cell (64)
@@ -56,9 +58,9 @@ class CropsGenerator:
         # (25000, 256, 256, 3)
         # (5000, 256, 256, 3)
         # do not retrieve info about dataset with h5f['train_img'][:].shape since it loads the whole dataset into RAM
-        # N_train_img = self.img_generator.h5f['train_dim'][:].astype(np.int32)
-        # N_val_img = self.img_generator.h5f['val_dim'][:].astype(np.int32)
-        # N_test_img = self.img_generator.h5f['test_dim'][:].astype(np.int32)
+        # self.num_train_batch = self.img_generator.h5f['train_dim'].astype(np.int32)
+        # self.num_val_batch = self.img_generator.h5f['val_dim'].astype(np.int32)
+        # self.num_test_batch = self.img_generator.h5f['test_dim'].astype(np.int32)
         self.num_train_batch = conf.N_train_imgs // self.batchSize
         self.num_val_batch = conf.N_val_imgs // self.batchSize
         self.num_test_batch = conf.N_test_imgs // self.batchSize
@@ -76,44 +78,49 @@ class CropsGenerator:
             std = np.expand_dims(std, axis=-1)
         return mean, std
 
-    def create_croppings(self, image: np.array):
+    def create_croppings(self, x: tf.Tensor, y=tf.Tensor):
         """
         Makes croppings from image
         The 3x3 grid is numbered as follows:
         0    1    2
         3    4    5
         6    7    8
-        :param image = 3D numpy array
+        :param x = 3D numpy array
         :param perm_index = index of referred permutation in max_hamming_set
         :return array of croppings (<num_croppings>) made of (heigh x width x colour channels) arrays
         """
 
-        y_dim, x_dim = image.shape[:2]
+        y_dim, x_dim = x.shape[:2]
         perm_index = int(random.randrange(self.numClasses))
+
         # Have the x & y coordinate of the crop
         if x_dim != self.cropSize:
-            # dimension of image is bigger than cropSize aka it has not been cropped before
+            # dimension of x is bigger than cropSize aka it has not been cropped before
             crop_x = random.randrange(x_dim - self.cropSize)
             crop_y = random.randrange(y_dim - self.cropSize)
         else:
             crop_x, crop_y = 0, 0
 
-        final_crops = np.zeros((self.tileSize, self.tileSize, self.numChannels, self.numCrops), dtype=np.float32)  # array with crops
-        crops_per_side = int(np.sqrt(self.numCrops))  # 9 crops -> 3 crops per side
-        for row in range(crops_per_side):
-            for col in range(crops_per_side):
-                x_start = crop_x + col * self.cellSize + random.randrange(self.cellSize - self.tileSize)
-                y_start = crop_y + row * self.cellSize + random.randrange(self.cellSize - self.tileSize)
-                # Put the crop in the list of pieces randomly according to the number picked from max_hamming_set
-                crop = image[y_start:y_start + self.tileSize, x_start:x_start + self.tileSize, :]
-                crop = self.color_channel_jitter(crop)  # jitter every image in a random way
-                final_crops[:, :, :, self.maxHammingSet[perm_index, row * crops_per_side + col]] = crop
+        croppings = []
+        for hm_index in self.maxHammingSet[perm_index]:
+            # It's sort of the contrary wrt previous behaviour. Now we find the hm_index crop we want to locate and
+            # we create its cropping. Then we stack in order, so the hamming_set order is kept.
+            # Define behaviour of col and rows to keep compatibility with previous code
+            col = hm_index % 3
+            row = int(hm_index/3)
 
-        return final_crops, perm_index
+            x_start = crop_x + col * self.cellSize + random.randrange(self.cellSize - self.tileSize)
+            y_start = crop_y + row * self.cellSize + random.randrange(self.cellSize - self.tileSize)
+            # Put the crop in the list of pieces randomly according to the number picked from max_hamming_set
+            crop = x[y_start:y_start + self.tileSize, x_start:x_start + self.tileSize, :]
+            crop = self.color_channel_jitter(crop)  # jitter every x in a random way
+            croppings.append(crop)
+        x = tf.stack(croppings, axis=-1)
+        return x, perm_index
 
-    def __single_generation_normalized(self, x: np.array):
+    def normalize_image(self, x: tf.Tensor, y: tf.Tensor):
         """
-        Normalize data one image at a time and produce a batch of cropped image
+        Normalize data one image at a time
         :param x: is a single images.
         :return:
         """
@@ -124,55 +131,47 @@ class CropsGenerator:
             r = x[..., 2]
             x = 0.21 * r + 0.72 * g + 0.07 * b
             # expanding dimension to preserve net layout
-            x = np.expand_dims(x, axis=-1)
-            x = np.concatenate([x, x, x], axis=-1)
+            x = tf.expand_dims(x, axis=-1)
+            x = tf.concat([x, x, x], axis=-1)
 
         # make the image distant from std deviation of the dataset
-        x -= self.meanTensor
-        x /= self.stdTensor
+        x = tf.math.subtract(x, self.meanTensor)
+        x = tf.math.divide(x, self.stdTensor)
 
-        tiles, y = self.create_croppings(x)
+        # tiles, y = self.create_croppings(x)
 
-        return tiles, y
+        return x, y
 
-    def one_hot(self, y):
+    def one_hot(self, x, y):
         """
         OneHot encoding for y label.
         :param y: label
         :return: y in the format of OneHot
         """
-        tmp = np.zeros(self.numClasses)
-        tmp[y] = 1
-        return tmp
-
-    def yield_cropped_images(self, mode='train'):
-        """
-        Generates batch and serve always new one
-        :param mode:
-        :return:
-        """
-        h5f_label = mode + '_img'
-
-        for x in self.img_generator(h5f_label):
-            X, y = self.__single_generation_normalized(x.astype(np.float32))
-            yield X, self.one_hot(y)
+        return x, tf.one_hot(y, self.numClasses)
 
     def generate(self, mode='train'):
-        # norm_func = lambda x, y: norm(x, y)
+        normalize_func = lambda x, y: self.normalize_image(x, y)
+        create_croppings_func = lambda x, y: self.create_croppings(x, y)
+        onehot_func = lambda x, y: self.one_hot(x, y)
+
         if mode == 'val':
             batch_size = self.val_batch_size
         else:
             batch_size = self.batchSize
+
+        h5f_label = mode + '_img'
         dataset = (tf.data.Dataset.from_generator(
-            lambda: self.yield_cropped_images(mode),
-            (tf.float32, tf.float32),
-            (tf.TensorShape([self.tileSize, self.tileSize, self.numChannels, self.numCrops]),
-             tf.TensorShape([self.conf.hammingSetSize])))
-                   # .map(norm_func, num_parallel_calls=8)
-                   .batch(batch_size)
-                   # .shuffle(self.img_generator.h5f[mode+'_img'].shape[0])
-                   .prefetch(NUM_PREFETCH)
-                   .repeat()
+            lambda: self.img_generator(h5f_label, self.numClasses),  # generator
+            (tf.float32, tf.int32),  # input types
+            (tf.TensorShape([self.original_dim, self.original_dim, self.numChannels]),  # shapes of input types
+             tf.TensorShape(())))
+                   .map(normalize_func, num_parallel_calls=AUTOTUNE)  # normalize input for mean and std
+                   .map(create_croppings_func, num_parallel_calls=AUTOTUNE)  # create actual croppings
+                   .map(onehot_func, num_parallel_calls=AUTOTUNE)  # convert label into one_hot encoding
+                   .batch(batch_size)  # defined batch_size
+                   .prefetch(AUTOTUNE)  # number of batches to be prefetch.
+                   .repeat()  # repeats the dataset when it is finished
                    )
         return dataset
 
@@ -188,19 +187,12 @@ class CropsGenerator:
         R = img[:, :, 0]
         G = img[:, :, 1]
         B = img[:, :, 2]
-        return np.dstack((
-            np.roll(R, r_jit, axis=0),
-            np.roll(G, g_jit, axis=1),
-            np.roll(B, b_jit, axis=0)
-        ))
+        return tf.stack((
+            tf.roll(R, r_jit, axis=0),
+            tf.roll(G, g_jit, axis=1),
+            tf.roll(B, b_jit, axis=0)
+        ), axis=2)
 
-
-# def norm(x: tf.Tensor, y: tf.Tensor) -> (tf.Tensor, tf.Tensor):
-#     # x = tf.to_float(x)
-#     x = tf.math.divide(
-#         tf.subtract(x, tf.reduce_min(x)),
-#         tf.subtract(tf.reduce_max(x), tf.reduce_min(x)))
-#     return x, y
 
 # UNCOMMENT ADDITION AND DIVISION PER MEAN AND STD BEFORE TRY TO SEE IMAGES
 
@@ -208,7 +200,7 @@ class CropsGenerator:
 #     os.chdir(os.pardir)
 #     with h5py.File(os.path.join('Dataset', conf.resources, conf.hammingFileName + str(conf.hammingSetSize) + '.h5'), 'r') as h5f:
 #         HammingSet = np.array(h5f['max_hamming_set'])
-#     #
+#
 #     dataset = CropsGenerator(conf, HammingSet)
 #     # generator = H5Generator(conf.data_path)
 #     # for img in generator('train_img'):
