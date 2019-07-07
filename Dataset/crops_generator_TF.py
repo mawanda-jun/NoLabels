@@ -23,12 +23,47 @@ class H5Generator:
         :param file:
         """
         self.h5f = h5py.File(file, 'r')  # it will be closed when the context will be terminated
+        # Preload slice of dataset to get faster access to dataset. Test dataset is not preload on default.
+        self.b_dim = 2500
+        self.buffer = {
+            'train0': self.h5f['train_img'][0*self.b_dim:self.b_dim],
+            'train1': self.h5f['train_img'][self.b_dim:2*self.b_dim],
+            'val0': self.h5f['val_img'][0*self.b_dim:self.b_dim],
+            'val1': self.h5f['val_img'][self.b_dim:self.b_dim:2*self.b_dim],
+            'test0': [],
+            'test1': [],
+            'train_index': 1,  # two buffers are already been loaded
+            'train_max': 70000//self.b_dim,
+            'val_index': 1,  # two buffers are already been loaded
+            'val_max': 25000//self.b_dim,
+            'test_index': 0,
+            'test_max': 5000//self.b_dim,
+        }
 
     def __call__(self, mode, num_classes, hamming_set, *args, **kwargs):
-        for img in self.h5f[mode]:
-            perm_index = int(random.randrange(num_classes))
-            yield img, perm_index, hamming_set[perm_index]
-            # yield img, dummy_y
+        while self.buffer[mode+'_index'] < self.buffer[mode+'_max']:
+            for img in self.buffer[mode+'0']:
+                perm_index = int(random.randrange(num_classes))
+                yield img, perm_index, hamming_set[perm_index]
+            self.buffer[mode+'_index'] += 1
+            self.fill_buffer(mode, '0')
+            # Quando ha finito la prima parte vuol dire che il buffer0 e' vuoto e si va sul buffer1 per non perdere prestazioni
+            # nel frattempo si ricarica il buffer0
+            for img in self.buffer[mode+'1']:
+                perm_index = int(random.randrange(num_classes))
+                yield img, perm_index, hamming_set[perm_index]
+            self.buffer[mode+'_index'] += 1
+            self.fill_buffer(mode, '1')
+
+    async def fill_buffer(self, mode, n_buffer):
+        try:
+            self.buffer[mode+n_buffer] = \
+                self.h5f[mode][self.buffer[mode+'_index']*self.b_dim:(self.buffer[mode+'_index']+1) * self.b_dim]
+        except IndexError:
+            # non serve fare nulla: il while posto sopra da' gia' sicurezza di uscita dal ciclo qualora si cerchi di
+            # caricare una porzione non accessibile.
+            pass
+
 
 
 class CropsGenerator:
@@ -79,7 +114,7 @@ class CropsGenerator:
             std = np.expand_dims(std, axis=-1)
         return mean, std
 
-    def croppings(self, hm_index, crop_x, crop_y, x, croppings):
+    def one_crop(self, hm_index, crop_x, crop_y, x, croppings):
         # It's sort of the contrary wrt previous behaviour. Now we find the hm_index crop we want to locate and
         # we create its cropping. Then we stack in order, so the hamming_set order is kept.
 
@@ -144,12 +179,12 @@ class CropsGenerator:
         # define variable before mapping
         croppings = []
         # create lambda function for mapping
-        croppings_func = lambda hm_index: self.croppings(hm_index, crop_x, crop_y, x, croppings)
+        one_crop_func = lambda hm_index: self.one_crop(hm_index, crop_x, crop_y, x, croppings)
         # this mapping takes one element at a time from <hamming_set> and serve it to croppings_func. So for
         # croppings_func hm_index is served from hamming_set, the other parameters from <create_croppings> function body
-        # This map returns a tensor that has the croppings stacked together in the first dimension
-        croppings = tf.map_fn(croppings_func, hamming_set)
-        # change order of axis (move croppings dimension from first to last)
+        # This map returns a tensor that has the one_crop stacked together in the first dimension
+        croppings = tf.map_fn(one_crop_func, hamming_set)
+        # change order of axis (move one_crop dimension from first to last)
         x = tf.transpose(croppings, [1, 2, 3, 0])
         return x, y
 
@@ -193,15 +228,15 @@ class CropsGenerator:
         else:
             batch_size = self.batchSize
 
-        h5f_label = mode + '_img'
+        # h5f_label = mode + '_img'
         dataset = (tf.data.Dataset.from_generator(
-            lambda: self.img_generator(h5f_label, self.numClasses, self.maxHammingSet),  # generator
+            lambda: self.img_generator(mode, self.numClasses, self.maxHammingSet),  # generator
             (tf.float32, tf.int32, tf.float32),  # input types
             (tf.TensorShape([self.original_dim, self.original_dim, self.numChannels]),  # shapes of input types
              tf.TensorShape(()),
              tf.TensorShape([self.numCrops])))
                    .map(normalize_func, num_parallel_calls=AUTOTUNE)  # normalize input for mean and std
-                   .map(create_croppings_func, num_parallel_calls=AUTOTUNE)  # create actual croppings
+                   .map(create_croppings_func, num_parallel_calls=AUTOTUNE)  # create actual one_crop
                    .map(onehot_func, num_parallel_calls=AUTOTUNE)  # convert label into one_hot encoding
                    .batch(batch_size)  # defined batch_size
                    .prefetch(AUTOTUNE)  # number of batches to be prefetch.
