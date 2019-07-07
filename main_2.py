@@ -98,8 +98,6 @@ def train():
                                   histogram_freq=0,
                                   write_grads=True,
                                   write_images=False,
-                                  # batch_size=conf.batchSize,
-                                  # batch_size * 10 because epoch takes too long and batch size too short
                                   update_freq=conf.batchSize * 10)
 
         # fit and validate model
