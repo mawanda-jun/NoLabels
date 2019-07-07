@@ -52,11 +52,11 @@ class AlexNet(tf.keras.layers.Layer):
         # self.dropout = layers.Dropout(0.5)
         self.alexnet = [
             layers.Conv2D(96, 11, 2, 'same', activation='relu', name='CONV1', input_shape=input_shape),
-            layers.BatchNormalization(momentum=0.99, name="batch_norm_1"),
+            # layers.BatchNormalization(momentum=0.99, name="batch_norm_1"),
             layers.MaxPool2D(3, 2, 'same', name='MaxPool1'),
 
             layers.Conv2D(256, 5, 2, 'same', activation='relu', name='CONV2'),
-            layers.BatchNormalization(momentum=0.99, name="batch_norm_2"),
+            # layers.BatchNormalization(momentum=0.99, name="batch_norm_2"),
             layers.MaxPool2D(3, 2, 'same', name='MaxPool2'),
 
             layers.Conv2D(384, 3, 1, 'same', activation='relu', name='CONV3'),
