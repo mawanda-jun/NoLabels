@@ -5,6 +5,7 @@ import tensorflow as tf
 from config import conf
 import os
 from PIL import Image
+import asyncio
 
 AUTOTUNE = tf.data.experimental.AUTOTUNE
 
@@ -39,26 +40,43 @@ class H5Generator:
             'test_index': 0,
             'test_max': 5000//self.b_dim,
         }
+        # we need to setup a new event loop to force execution of
+        self.loop = asyncio.new_event_loop()
+        # set task for both tasks
+        self.task1 = None
+        self.task2 = None
 
     def __call__(self, mode, num_classes, hamming_set, *args, **kwargs):
+        # continue until tasks are finished. Repeat() should call the function again
         while self.buffer[mode+'_index'] < self.buffer[mode+'_max']:
+            # this is the first round, so self.task2 would be empty
+            if self.task2 is not None:
+                # command to wait execution of self.task2. This would never be a big await
+                self.loop.run_until_complete(self.task2)
+            # load images form buffer 0
             for img in self.buffer[mode+'0']:
                 perm_index = int(random.randrange(num_classes))
                 yield img, perm_index, hamming_set[perm_index]
+
+            # buffer0 is now finished: we increment its index, order to refill it with self.task1, then we go to the next
+            # buffer
             self.buffer[mode+'_index'] += 1
-            self.fill_buffer(mode, '0')
+            self.task1 = self.loop.create_task(self.fill_buffer(mode, '0'))
             # Quando ha finito la prima parte vuol dire che il buffer0 e' vuoto e si va sul buffer1 per non perdere prestazioni
             # nel frattempo si ricarica il buffer0
             for img in self.buffer[mode+'1']:
                 perm_index = int(random.randrange(num_classes))
                 yield img, perm_index, hamming_set[perm_index]
             self.buffer[mode+'_index'] += 1
-            self.fill_buffer(mode, '1')
+            self.loop.run_until_complete(self.task1)
+            self.task2 = self.loop.create_task(self.fill_buffer(mode, '1'))
+        # when the dataset has been iterated wholly it starts again from 0
+        self.buffer[mode + '_index'] = 0
 
     async def fill_buffer(self, mode, n_buffer):
         try:
             self.buffer[mode+n_buffer] = \
-                self.h5f[mode][self.buffer[mode+'_index']*self.b_dim:(self.buffer[mode+'_index']+1) * self.b_dim]
+                self.h5f[mode+'_img'][self.buffer[mode+'_index']*self.b_dim:(self.buffer[mode+'_index']+1) * self.b_dim]
         except IndexError:
             # non serve fare nulla: il while posto sopra da' gia' sicurezza di uscita dal ciclo qualora si cerchi di
             # caricare una porzione non accessibile.
