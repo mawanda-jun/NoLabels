@@ -52,11 +52,11 @@ class AlexNet(tf.keras.layers.Layer):
         # self.dropout = layers.Dropout(0.5)
         self.alexnet = [
             layers.Conv2D(96, 11, 2, 'same', activation='relu', name='CONV1', input_shape=input_shape),
-            # layers.BatchNormalization(momentum=0.99, name="batch_norm_1"),
+            layers.BatchNormalization(momentum=0.9, name="batch_norm_1"),
             layers.MaxPool2D(3, 2, 'same', name='MaxPool1'),
 
             layers.Conv2D(256, 5, 2, 'same', activation='relu', name='CONV2'),
-            # layers.BatchNormalization(momentum=0.99, name="batch_norm_2"),
+            layers.BatchNormalization(momentum=0.9, name="batch_norm_2"),
             layers.MaxPool2D(3, 2, 'same', name='MaxPool2'),
 
             layers.Conv2D(384, 3, 1, 'same', activation='relu', name='CONV3'),
@@ -122,6 +122,7 @@ class Siamese(tf.keras.Model):
         # self.alex_block = [self.alex for _ in range(9)]
         # create last layers. We create them here so they are counted in model.summary() method
         self.dense = layers.Dense(4096, activation='relu', name='FC7', input_shape=(256*6*6, 512))
+        self.bn = layers.BatchNormalization(momentum=0.9, name='Batch_norm_last')
         self.dropout = layers.Dropout(0.5, name='last_dropout')
         self.classifier = layers.Dense(num_classes, activation='softmax', name='FC8')
 
