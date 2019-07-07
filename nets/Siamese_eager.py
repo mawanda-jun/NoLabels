@@ -143,6 +143,7 @@ class Siamese(tf.keras.Model):
         siamese_block = tf.concat(alexes, axis=1)
 
         x = self.dense(siamese_block)
+        x = self.bn(x, training)
         x = self.dropout(x, training)
         logits = self.classifier(x)
         return logits

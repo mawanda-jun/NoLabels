@@ -24,7 +24,7 @@ class H5Generator:
         """
         self.h5f = h5py.File(file, 'r')  # it will be closed when the context will be terminated
         # Preload slice of dataset to get faster access to dataset. Test dataset is not preload on default.
-        self.b_dim = 2500
+        self.b_dim = 2000
         self.buffer = {
             'train0': self.h5f['train_img'][0*self.b_dim:self.b_dim],
             'train1': self.h5f['train_img'][self.b_dim:2*self.b_dim],
