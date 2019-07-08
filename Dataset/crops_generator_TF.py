@@ -27,18 +27,18 @@ class H5Generator:
         # Preload slice of dataset to get faster access to dataset. Test dataset is not preload on default.
         self.b_dim = 2000
         self.buffer = {
-            'train0': self.h5f['train_img'][0*self.b_dim:self.b_dim],
-            'train1': self.h5f['train_img'][self.b_dim:2*self.b_dim],
-            'val0': self.h5f['val_img'][0*self.b_dim:self.b_dim],
-            'val1': self.h5f['val_img'][self.b_dim:self.b_dim:2*self.b_dim],
+            'train0': self.h5f['train_img'][0 * self.b_dim:self.b_dim],
+            'train1': self.h5f['train_img'][self.b_dim:2 * self.b_dim],
+            'val0': self.h5f['val_img'][0 * self.b_dim:self.b_dim],
+            'val1': self.h5f['val_img'][self.b_dim:self.b_dim:2 * self.b_dim],
             'test0': [],
             'test1': [],
             'train_index': 1,  # two buffers are already been loaded
-            'train_max': 70000//self.b_dim,
+            'train_max': 350000 // self.b_dim,
             'val_index': 1,  # two buffers are already been loaded
-            'val_max': 25000//self.b_dim,
+            'val_max': 125000 // self.b_dim,
             'test_index': 0,
-            'test_max': 5000//self.b_dim,
+            'test_max': 50000 // self.b_dim,
         }
         # we need to setup a new event loop to force execution of
         self.loop = asyncio.new_event_loop()
@@ -48,26 +48,26 @@ class H5Generator:
 
     def __call__(self, mode, num_classes, hamming_set, *args, **kwargs):
         # continue until tasks are finished. Repeat() should call the function again
-        while self.buffer[mode+'_index'] < self.buffer[mode+'_max']:
+        while self.buffer[mode + '_index'] < self.buffer[mode + '_max']:
             # this is the first round, so self.task2 would be empty
             if self.task2 is not None:
                 # command to wait execution of self.task2. This would never be a big await
                 self.loop.run_until_complete(self.task2)
             # load images form buffer 0
-            for img in self.buffer[mode+'0']:
+            for img in self.buffer[mode + '0']:
                 perm_index = int(random.randrange(num_classes))
                 yield img, perm_index, hamming_set[perm_index]
 
             # buffer0 is now finished: we increment its index, order to refill it with self.task1, then we go to the next
             # buffer
-            self.buffer[mode+'_index'] += 1
+            self.buffer[mode + '_index'] += 1
             self.task1 = self.loop.create_task(self.fill_buffer(mode, '0'))
             # Quando ha finito la prima parte vuol dire che il buffer0 e' vuoto e si va sul buffer1 per non perdere prestazioni
             # nel frattempo si ricarica il buffer0
-            for img in self.buffer[mode+'1']:
+            for img in self.buffer[mode + '1']:
                 perm_index = int(random.randrange(num_classes))
                 yield img, perm_index, hamming_set[perm_index]
-            self.buffer[mode+'_index'] += 1
+            self.buffer[mode + '_index'] += 1
             self.loop.run_until_complete(self.task1)
             self.task2 = self.loop.create_task(self.fill_buffer(mode, '1'))
         # when the dataset has been iterated wholly it starts again from 0
@@ -75,13 +75,13 @@ class H5Generator:
 
     async def fill_buffer(self, mode, n_buffer):
         try:
-            self.buffer[mode+n_buffer] = \
-                self.h5f[mode+'_img'][self.buffer[mode+'_index']*self.b_dim:(self.buffer[mode+'_index']+1) * self.b_dim]
+            self.buffer[mode + n_buffer] = \
+                self.h5f[mode + '_img'][
+                self.buffer[mode + '_index'] * self.b_dim:(self.buffer[mode + '_index'] + 1) * self.b_dim]
         except IndexError:
             # non serve fare nulla: il while posto sopra da' gia' sicurezza di uscita dal ciclo qualora si cerchi di
             # caricare una porzione non accessibile.
             pass
-
 
 
 class CropsGenerator:
@@ -112,12 +112,12 @@ class CropsGenerator:
         # (25000, 256, 256, 3)
         # (5000, 256, 256, 3)
         # do not retrieve info about dataset with h5f['train_img'][:].shape since it loads the whole dataset into RAM
-        # self.num_train_batch = self.img_generator.h5f['train_dim'].astype(np.int32)
-        # self.num_val_batch = self.img_generator.h5f['val_dim'].astype(np.int32)
-        # self.num_test_batch = self.img_generator.h5f['test_dim'].astype(np.int32)
-        self.num_train_batch = conf.N_train_imgs // self.batchSize
-        self.num_val_batch = conf.N_val_imgs // self.batchSize
-        self.num_test_batch = conf.N_test_imgs // self.batchSize
+        self.num_train_batch = self.img_generator.h5f['train_dim'][...].astype(np.int32) // self.batchSize
+        self.num_val_batch = self.img_generator.h5f['val_dim'][...].astype(np.int32) // self.batchSize
+        self.num_test_batch = self.img_generator.h5f['test_dim'][...].astype(np.int32) // self.batchSize
+        # self.num_train_batch = conf.N_train_imgs // self.batchSize
+        # self.num_val_batch = conf.N_val_imgs // self.batchSize
+        # self.num_test_batch = conf.N_test_imgs // self.batchSize
 
     def get_stats(self):
         """
@@ -132,7 +132,7 @@ class CropsGenerator:
             std = np.expand_dims(std, axis=-1)
         return mean, std
 
-    def one_crop(self, hm_index, crop_x, crop_y, x, croppings):
+    def one_crop(self, hm_index, crop_x, crop_y, x):
         # It's sort of the contrary wrt previous behaviour. Now we find the hm_index crop we want to locate and
         # we create its cropping. Then we stack in order, so the hamming_set order is kept.
 
@@ -195,9 +195,9 @@ class CropsGenerator:
         else:
             crop_x, crop_y = 0, 0
         # define variable before mapping
-        croppings = []
+
         # create lambda function for mapping
-        one_crop_func = lambda hm_index: self.one_crop(hm_index, crop_x, crop_y, x, croppings)
+        one_crop_func = lambda hm_index: self.one_crop(hm_index, crop_x, crop_y, x)
         # this mapping takes one element at a time from <hamming_set> and serve it to croppings_func. So for
         # croppings_func hm_index is served from hamming_set, the other parameters from <create_croppings> function body
         # This map returns a tensor that has the one_crop stacked together in the first dimension
@@ -236,6 +236,24 @@ class CropsGenerator:
         """
         return x, tf.one_hot(y, self.numClasses)
 
+    def color_channel_jitter(self, img):
+        """
+        Spatial image jitter, aka movement of color channel in various manners
+        """
+        if self.colorJitter == 0:
+            return img
+        r_jit = random.randrange(-self.colorJitter, self.colorJitter)
+        g_jit = random.randrange(-self.colorJitter, self.colorJitter)
+        b_jit = random.randrange(-self.colorJitter, self.colorJitter)
+        R = img[:, :, 0]
+        G = img[:, :, 1]
+        B = img[:, :, 2]
+        return tf.stack((
+            tf.roll(R, r_jit, axis=0),
+            tf.roll(G, g_jit, axis=1),
+            tf.roll(B, b_jit, axis=0)
+        ), axis=2)
+
     def generate(self, mode='train'):
         normalize_func = lambda x, y, z: self.normalize_image(x, y, z)
         create_croppings_func = lambda x, y, z: self.create_croppings(x, y, z)
@@ -262,25 +280,6 @@ class CropsGenerator:
                    )
         return dataset
 
-    def color_channel_jitter(self, img):
-        """
-        Spatial image jitter, aka movement of color channel in various manners
-        """
-        if self.colorJitter == 0:
-            return img
-        r_jit = random.randrange(-self.colorJitter, self.colorJitter)
-        g_jit = random.randrange(-self.colorJitter, self.colorJitter)
-        b_jit = random.randrange(-self.colorJitter, self.colorJitter)
-        R = img[:, :, 0]
-        G = img[:, :, 1]
-        B = img[:, :, 2]
-        return tf.stack((
-            tf.roll(R, r_jit, axis=0),
-            tf.roll(G, g_jit, axis=1),
-            tf.roll(B, b_jit, axis=0)
-        ), axis=2)
-
-
 # UNCOMMENT ADDITION AND DIVISION PER MEAN AND STD BEFORE TRY TO SEE IMAGES
 # if __name__ == '__main__':
 #     os.chdir(os.pardir)
@@ -292,7 +291,7 @@ class CropsGenerator:
 #     train_set = dataset.generate(mode='train')
 #     train_iter = train_set.make_one_shot_iterator()
 #     x = tf.placeholder(dtype=tf.float32, shape=(64, 64, 3))
-    # generator = H5Generator(conf.data_path)
+# generator = H5Generator(conf.data_path)
 #     # for img in generator('train_img'):
 #     #     Image.fromarray(img).show()
 #     #     input()
