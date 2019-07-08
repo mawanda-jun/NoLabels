@@ -51,7 +51,7 @@ class AlexNet(tf.keras.layers.Layer):
             layers.MaxPool2D(3, 2, 'same', name='MaxPool3'),
 
             layers.Flatten(),
-            layers.Dense(512, activation='relu', name='FC6'),
+            layers.Dense(1024, activation='relu', name='FC6'),
             layers.Dropout(0.5)
         ]
         for i, layer in enumerate(self.alexnet):

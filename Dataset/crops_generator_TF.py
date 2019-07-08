@@ -34,11 +34,11 @@ class H5Generator:
             'test0': [],
             'test1': [],
             'train_index': 1,  # two buffers are already been loaded
-            'train_max': 350000 // self.b_dim,
+            'train_max': self.h5f['train_dim'][...].astype(np.int32) // self.b_dim,
             'val_index': 1,  # two buffers are already been loaded
-            'val_max': 125000 // self.b_dim,
+            'val_max': self.h5f['val_dim'][...].astype(np.int32) // self.b_dim,
             'test_index': 0,
-            'test_max': 50000 // self.b_dim,
+            'test_max': self.h5f['test_dim'][...].astype(np.int32) // self.b_dim,
         }
         # we need to setup a new event loop to force execution of
         self.loop = asyncio.new_event_loop()
