@@ -192,4 +192,4 @@ if __name__ == '__main__':
     images_list = images_in_paths(os.path.join(res_path))
     random.shuffle(images_list)
     images_list = images_list[0:elements]
-    generate_h5py(images_list, 256, 'ILSVRC_1e5.h5', folder=os.path.join(output_path, 'h5_files'))
+    generate_h5py(images_list, 256, 'ILSVRC_'+str(elements)+'.h5', folder=os.path.join(output_path, 'h5_files'))
