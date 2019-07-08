@@ -1,6 +1,8 @@
 import tensorflow as tf
 from JPS import JigsawPuzzleSolver
+from FT import FileTransfer
 from config import conf
+from config_ft import conf_ft
 import argparse
 tf.enable_eager_execution()
 
@@ -15,8 +17,13 @@ def JPS(conf):
     model.train()
 
 
+def FT(conf_ft):
+    model = FileTransfer(conf_ft)
+    # model.train()
+
+
 if __name__ == '__main__':
     if mode == 'jps':
         JPS(conf)
     elif mode == 'fn':
-        pass
+        FT(conf_ft)
