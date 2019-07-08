@@ -36,20 +36,6 @@ class AlexNet(tf.keras.layers.Layer):
         ]
 
     def build(self, input_shape=(-1, 64, 64, 3)):
-        # self.conv1 = layers.Conv2D(96, 11, 2, 'same', activation='relu', name='CONV1', input_shape=(-1, 64, 64, 3))
-        # self.maxpool1 = layers.MaxPool2D(3, 2, 'same', name='MaxPool1')
-        #
-        # self.conv2 = layers.Conv2D(256, 5, 2, 'same', activation='relu', name='CONV2')
-        # self.maxpool2 = layers.MaxPool2D(3, 2, 'same', name='MaxPool2')
-        #
-        # self.conv3 = layers.Conv2D(384, 3, 1, 'same', activation='relu', name='CONV3')
-        # self.conv4 = layers.Conv2D(384, 3, 1, 'same', activation='relu', name='CONV4')
-        # self.conv5 = layers.Conv2D(256, 3, 1, 'same', activation='relu', name='CONV5')
-        # self.maxpool3 = layers.MaxPool2D(3, 2, 'same', name='MaxPool3')
-        #
-        # self.flatten = layers.Flatten()
-        # self.fc6 = layers.Dense(512, activation='relu', name='FC6')
-        # self.dropout = layers.Dropout(0.5)
         self.alexnet = [
             layers.Conv2D(96, 11, 2, 'same', activation='relu', name='CONV1', input_shape=input_shape),
             layers.BatchNormalization(momentum=0.9, name="batch_norm_1"),
@@ -94,21 +80,6 @@ class AlexNet(tf.keras.layers.Layer):
             else:
                 x = layer(x, training)
         return x
-        # x = self.conv1(inputs)
-        # x = self.maxpool1(x)
-        #
-        # x = self.conv2(x)
-        # x = self.maxpool2(x)
-        #
-        # x = self.conv3(x)
-        # x = self.conv4(x)
-        # x = self.conv5(x)
-        # x = self.maxpool3(x)
-        #
-        # x = self.flatten(x)
-        # x = self.fc6(x)
-        # x = self.dropout(x, training=training)
-        # return x
 
 
 class Siamese(tf.keras.Model):
