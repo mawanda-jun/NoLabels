@@ -19,7 +19,7 @@ def JPS(conf):
 
 def FT(conf_ft):
     model = FileTransfer(conf_ft)
-    model.train()
+    # model.train()
 
 
 if __name__ == '__main__':

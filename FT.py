@@ -34,7 +34,7 @@ class FileTransfer:
         # initialize model
         model = SiameseFT(self.conf.hammingSetSize)
         # make placeholder to retrieve information about input shape
-        dummy_input = tf.zeros((1, 64, 64, 3, 9))
+        dummy_input = tf.zeros((1, 256, 256, 3))
         model._set_inputs(dummy_input)
         return model
 
