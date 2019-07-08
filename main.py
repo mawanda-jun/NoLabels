@@ -1,8 +1,6 @@
 import tensorflow as tf
 from JPS import JigsawPuzzleSolver
 from FT import FileTransfer
-from config import conf
-from config_ft import conf_ft
 import argparse
 tf.enable_eager_execution()
 
@@ -10,6 +8,11 @@ parser = argparse.ArgumentParser()
 parser.add_argument('-m', '--mode', help='Mode with which to run main: jps or fn (Jiggle Puzzle Solver or Fine Tuning)', required=True)
 args = vars(parser.parse_args())
 mode = str(args['mode'])
+
+if mode == 'jps':
+    from config import conf
+elif mode == 'ft':
+    from config_ft import conf_ft
 
 
 def JPS(conf):
