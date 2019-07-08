@@ -15,9 +15,6 @@ class AlexNet(tf.keras.layers.Layer):
     """
     def __init__(self, name, **kwargs):
         super(AlexNet, self).__init__(name, **kwargs)
-        self.alexnet = []
-        self.flatten_out = None
-        self.config = {}
         # trainable parameters in form of output shape for every layer in AlexNet
         self.shapes = [
             (11, 11, 3, 96),
@@ -54,9 +51,22 @@ class AlexNet(tf.keras.layers.Layer):
             layers.Dense(1024, activation='relu', name='FC6'),
             layers.Dropout(0.5)
         ]
-        for i, layer in enumerate(self.alexnet):
+        # for i, layer in enumerate(self.alexnet):
             # adds the weights for model.summary(). These are not going to be trained
-            self.add_weight(name=layer.name, shape=self.shapes[i])
+            # self.add_weight(name=layer.name, shape=self.shapes[i])
+
+    @staticmethod
+    def compute_alex(alexnet, inputs, training):
+        # for each layer of alex
+        x = alexnet[0](inputs)  # compute first output
+        for layer in alexnet[1:]:
+            # invoke every layer with the output. We need to check the signature of every layer: dropout and batch_norm
+            # accept also the 'training' parameter, which deactivate the layer in case of validation or test
+            if 'training' not in str(signature(layer.call)):
+                x = layer(x)
+            else:
+                x = layer(x, training)
+        return x
 
     def get_config(self):
         return self.config
@@ -71,15 +81,12 @@ class AlexNet(tf.keras.layers.Layer):
         :param mask:
         :return:
         """
-        x = self.alexnet[0](inputs)  # compute first output
-        for layer in self.alexnet[1:]:
-            # invoke every layer with the output. We need to check the signature of every layer: dropout and batch_norm
-            # accept also the 'training' parameter, which deactivate the layer in case of validation or test
-            if 'training' not in str(signature(layer.call)):
-                x = layer(x)
-            else:
-                x = layer(x, training)
-        return x
+        x = tf.unstack(inputs, axis=-1)
+        alexes = []
+        for i in range(9):
+            # it should reuse the variables inside alex_block
+            alexes.append(self.compute_alex(self.alexnet, x[i], training))
+        return tf.concat(alexes, axis=1)
 
 
 class Siamese(tf.keras.Model):
@@ -88,7 +95,7 @@ class Siamese(tf.keras.Model):
     """
     def __init__(self, num_classes, **kwargs):
         super(Siamese, self).__init__(**kwargs)
-        self.alex = AlexNet('alex')
+        self.alexes = AlexNet('alex')
         # generate instances of the same AlexNet object. In this way the weights are shared
         # self.alex_block = [self.alex for _ in range(9)]
         # create last layers. We create them here so they are counted in model.summary() method
@@ -105,15 +112,8 @@ class Siamese(tf.keras.Model):
         :param mask:
         :return:
         """
-        alex_block = [self.alex for _ in range(9)]
-        x = tf.unstack(inputs, axis=-1)
-        alexes = []
-        for i in range(9):
-            # it should reuse the variables inside alex_block
-            alexes.append(alex_block[i](x[i], training))
-        siamese_block = tf.concat(alexes, axis=1)
-
-        x = self.dense(siamese_block)
+        x = self.alexes(inputs, training)
+        x = self.dense(x)
         x = self.bn(x, training)
         x = self.dropout(x, training)
         logits = self.classifier(x)
