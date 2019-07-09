@@ -14,23 +14,8 @@ class AlexNet(tf.keras.layers.Layer):
     Create a super-layer made up of "Alex". self.alexnet is a list of layers to be built
     """
     def __init__(self, name, **kwargs):
-        super(AlexNet, self).__init__(name, **kwargs)
-        # trainable parameters in form of output shape for every layer in AlexNet
-        self.shapes = [
-            (11, 11, 3, 96),
-            (96,),
-            (),
-            (5, 5, 3, 256),
-            (256, ),
-            (),
-            (3, 3, 3, 384),
-            (3, 3, 3, 384),
-            (3, 3, 3, 256),
-            (),
-            (),
-            (256*6*6, 1024),
-            (),
-        ]
+        super(AlexNet, self).__init__(name=name, **kwargs)
+        self.alexnet = []
 
     def build(self, input_shape=(-1, 64, 64, 3)):
         self.alexnet = [
@@ -51,9 +36,6 @@ class AlexNet(tf.keras.layers.Layer):
             layers.Dense(1024, activation='relu', name='FC6'),
             layers.Dropout(0.5)
         ]
-        # for i, layer in enumerate(self.alexnet):
-            # adds the weights for model.summary(). These are not going to be trained
-            # self.add_weight(name=layer.name, shape=self.shapes[i])
 
     @staticmethod
     def compute_alex(alexnet, inputs, training):
@@ -96,9 +78,6 @@ class Siamese(tf.keras.Model):
     def __init__(self, num_classes, **kwargs):
         super(Siamese, self).__init__(**kwargs)
         self.alexes = AlexNet('alex')
-        # generate instances of the same AlexNet object. In this way the weights are shared
-        # self.alex_block = [self.alex for _ in range(9)]
-        # create last layers. We create them here so they are counted in model.summary() method
         self.dense = layers.Dense(4096, activation='relu', name='FC7')
         self.bn = layers.BatchNormalization(momentum=0.9, name='Batch_norm_last')
         self.dropout = layers.Dropout(0.5, name='last_dropout')
