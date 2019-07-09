@@ -35,17 +35,19 @@ def square_img(im: Image.Image) -> Image:
     return im
 
 
-class ThreadedH5pyFile(threading.Thread):
+class ThreadedImageWriter(threading.Thread):
     """
-    Threaded version to prepare the dataset. Everything runs smoothly because we have multiple labels that avoid
+    Threaded version to prepare the dataset. Everything runs smoothly because we have multiple folders that avoid
     race conditions
     """
-    def __init__(self, img_list: List[str], set_type: str, hdf5_out: h5py.File, img_size: int):
+    def __init__(self, img_list: List[str], set_type: str, hdf5_out: h5py.File, img_size: int, dataset_folder: str):
         threading.Thread.__init__(self)
         self.img_list = img_list
         self.set_type = set_type
         self.hdf5_out = hdf5_out
         self.img_size = img_size
+        self.img_folder = os.path.join(dataset_folder, set_type)
+        os.makedirs(self.img_folder, exist_ok=True)
         self.read_errors = set([])
         self.training_mean_new = np.zeros((self.img_size, self.img_size, 3), dtype=np.float32)
         self.training_mean_old = np.zeros((self.img_size, self.img_size, 3), dtype=np.float32)
@@ -68,6 +70,7 @@ class ThreadedH5pyFile(threading.Thread):
                 if img.mode == 'RGB':
                     img = square_img(img)
                     img = img.resize((self.img_size, self.img_size), resample=Image.LANCZOS)
+                    img.save(os.path.join(self.img_folder, self.set_type+'_'+str(i)+'.jpg'))
                     # convert pillow image into a np array
                     np_img = np.array(img)
                     # calculate per feature mean and variance on training data only
@@ -88,7 +91,8 @@ class ThreadedH5pyFile(threading.Thread):
                         self.training_mean_old = None
                         self.training_variance = None
                     # write images inside h5 file
-                    self.hdf5_out[self.set_type + '_img'][i, ...] = np_img
+                    # self.hdf5_out[self.set_type + '_img'][i, ...] = np_img
+                    # Image.from_array(np_img).save(os.path.join(dataset_folder, self.type, self.type+str(i)+'.jpg')
             except OSError as e:
                 self.read_errors.add(str(e) + '\n')
                 continue
@@ -125,7 +129,7 @@ def shuffle_dataset(lst: List, seed: int = None) -> None:
     random.shuffle(lst)
 
 
-def generate_h5py(file_list: List, img_size=256, hdf5_file_name: str = 'data', train_dim: float = 0.70, val_dim: float = 0.25, folder: str='h5_files'):
+def generate_dataset(file_list: List, dataset_folder: str, img_size=256, train_dim: float = 0.70, val_dim: float = 0.25):
     """
     Generate and save train, validation and test data. Test data is what is left from train and validation sets
     :param file_list:
@@ -150,13 +154,11 @@ def generate_h5py(file_list: List, img_size=256, hdf5_file_name: str = 'data', t
     # it is better to keep validation dataset bigger than test one
     assert len(file_dict['train']) > len(file_dict['val']) > len(file_dict['test'])
 
-    # create dataset parts: X_<set_type> will contain the images, the Y_<set_type> the labels,
-    # according to the labels of labels_dict
-    os.makedirs(folder, exist_ok=True)
-    with h5py.File(os.path.join(os.getcwd(), folder, hdf5_file_name), mode='w') as hdf5_out:
-        hdf5_out.create_dataset('train_img', (len(file_dict['train']), img_size, img_size, 3), np.uint8)
-        hdf5_out.create_dataset('val_img', (len(file_dict['val']), img_size, img_size, 3), np.uint8)
-        hdf5_out.create_dataset('test_img', (len(file_dict['test']), img_size, img_size, 3), np.uint8)
+    os.makedirs(dataset_folder, exist_ok=True)
+
+    # create h5file to store information about train_mean and train_std that are useful for training later
+    h5_path = os.path.join(dataset_folder, 'info.h5')
+    with h5py.File(h5_path, mode='w') as hdf5_out:
         hdf5_out.create_dataset('train_mean', (img_size, img_size, 3), np.float32)
         hdf5_out.create_dataset('train_std', (img_size, img_size, 3), np.float32)
         hdf5_out.create_dataset('train_dim', (), np.int32, data=int(n*train_dim))
@@ -165,7 +167,7 @@ def generate_h5py(file_list: List, img_size=256, hdf5_file_name: str = 'data', t
         # make one thread for <set_type>
         threaded_types = []
         for set_type, img_list in file_dict.items():
-            threaded_types.append(ThreadedH5pyFile(img_list, set_type, hdf5_out, img_size))
+            threaded_types.append(ThreadedImageWriter(img_list, set_type, hdf5_out, img_size, dataset_folder))
 
         for thread in threaded_types:
             thread.start()
@@ -186,10 +188,10 @@ def generate_h5py(file_list: List, img_size=256, hdf5_file_name: str = 'data', t
 
 
 if __name__ == '__main__':
-    output_path = os.path.join(os.getcwd(), 'resources')
-    elements = int(1e5)  # number of images to keep
+    output_path = os.path.join(os.getcwd(), 'resources', 'images')
+    elements = int(5e5)  # number of images to keep
     res_path = os.path.join('E:\\dataset\\images_only')
     images_list = images_in_paths(os.path.join(res_path))
     random.shuffle(images_list)
     images_list = images_list[0:elements]
-    generate_h5py(images_list, 256, 'ILSVRC_'+str(elements)+'.h5', folder=os.path.join(output_path, 'h5_files'))
+    generate_dataset(images_list, os.path.join(output_path, 'ILSVRC_' + str(elements)))

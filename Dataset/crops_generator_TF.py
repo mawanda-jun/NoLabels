@@ -5,99 +5,60 @@ import tensorflow as tf
 from config import conf
 import os
 from PIL import Image
-import asyncio
+from typing import List
 
 AUTOTUNE = tf.data.experimental.AUTOTUNE
 
 
-class H5Generator:
+def images_in_paths(folder_path: str) -> List[str]:
     """
-    This is a generator of the file. We don't have to open it every time: we just open it once and then call it
-    with exact parameters. In addition I've created a "prefetch" function, so the function takes care to pre-load the
-    dataset and keep the training more smooth.
+    Collects paths to all images from one folder and return them as a list
+    :param folder_path:
+    :return: list of path/to/image
+    """
+    paths = []
+    folder_path = os.path.join(os.getcwd(), folder_path)
+    for root, dirs, files in os.walk(folder_path):
+        for file in files:
+            paths.append(os.path.join(root, file))
+    return paths
+
+
+class ImageGenerator:
+    """
+    ImageGenerator takes care to serve all path/to/images in the right way and to serve the dataset info about mean,
+    standard deviation and the number of items in folder.
     """
 
-    def __init__(self, file):
+    def __init__(self, data_path):
         """
-        Open file once. The object CropsGenerator is kept alive for all the training (and evaluation). So the file will
-        remain opened for the whole time.
-        :param file:
+        Open file once. The object ImageGenerator is kept alive for all the training (and evaluation). So lists and file
+        are not loaded to disk yet, waiting for call function.
+        :param data_path: path/to/data folder, in which there are train, val, test folders with images and the file 'info.h5' with
+        std/mean and number of items in dataset
         """
-        self.h5f = h5py.File(file, 'r')  # it will be closed when the context will be terminated
-        # Preload slice of dataset to get faster access to dataset. Test dataset is not preload on default.
-        self.b_dim = 2500  # division per all datasets must be equal to 0
-        self.buffer = {
-            'train0': [],
-            'train1': [],
-            'val0': [],
-            'val1': [],
-            'test0': [],
-            'test1': [],
-            'train_index': 1,  # two buffers are already loaded
-            'train_max': self.h5f['train_dim'][...].astype(np.int32) // self.b_dim,
-            'val_index': 1,  # two buffers are already loaded
-            'val_max': self.h5f['val_dim'][...].astype(np.int32) // self.b_dim,
-            'test_index': 0,
-            'test_max': self.h5f['test_dim'][...].astype(np.int32) // self.b_dim,
-        }
-        # we need to setup a new event loop to force execution of
-        self.loop = asyncio.new_event_loop()
-        # set task for both tasks
-        self.task1 = None
-        self.task2 = None
+        self.data_path = data_path
+        self.h5f = h5py.File(os.path.join(data_path, 'info.h5'),
+                             'r')  # it will be closed when the context will be terminated
 
-    def __call__(self, mode, num_classes, hamming_set, *args, **kwargs):
-        if not self.buffer[mode + '0']:
-            self.buffer[mode + '0'] = self.h5f[mode + '_img'][0 * self.b_dim:self.b_dim]
-            self.buffer[mode + '1'] = self.h5f[mode + '_img'][self.b_dim:2 * self.b_dim]
-            self.buffer[mode + '_index'] = 1
-            self.task1 = None
-            self.task2 = None
-
-        # continue until tasks are finished. Repeat() should call the function again
-        while self.buffer[mode + '_index'] < self.buffer[mode + '_max']:
-            # this is the first round, so self.task2 would be empty
-            if self.task2 is not None:
-                # command to wait execution of self.task2. This would never be a big await
-                self.loop.run_until_complete(self.task2)
-            # load images form buffer 0
-
-            for img in self.buffer[mode + '0']:
-                perm_index = int(random.randrange(num_classes))
-                yield img, perm_index, hamming_set[perm_index]
-
-            # buffer0 is now finished: we increment its index, order to refill it with self.task1, then we go to the next
-            # buffer
-            self.task1 = self.loop.create_task(self.fill_buffer(mode, '0'))
-
-            # Quando ha finito la prima parte vuol dire che il buffer0 e' vuoto e si va sul buffer1 per non perdere prestazioni
-            # nel frattempo si ricarica il buffer0
-            for img in self.buffer[mode + '1']:
-                perm_index = int(random.randrange(num_classes))
-                yield img, perm_index, hamming_set[perm_index]
-            self.loop.run_until_complete(self.task1)
-            self.task2 = self.loop.create_task(self.fill_buffer(mode, '1'))
-        # when the dataset has been iterated wholly it starts again from 0
-
-    async def fill_buffer(self, mode, n_buffer):
-        try:
-            self.buffer[mode + n_buffer] = \
-                self.h5f[mode + '_img'][
-                (self.buffer[mode + '_index'] + 2) * self.b_dim:(self.buffer[mode + '_index'] + 3) * self.b_dim]
-        except IndexError:
-            self.buffer[mode + n_buffer] = []
-        finally:
-            self.buffer[mode + '_index'] += 1
+    def __call__(self, dataset_type, *args, **kwargs):
+        """
+        Instance is called with different dataset_type
+        :param dataset_type:
+        :param args:
+        :param kwargs:
+        :return:
+        """
+        return images_in_paths(os.path.join(self.data_path, dataset_type))
 
 
 class CropsGenerator:
     """
-    Read HD5F file, one batch at a time, and serve a jigsaw puzzle.
+    CropsGenerator takes care to load images from disk and convert, crop and serve them as a tf.data.Dataset
     """
-
     def __init__(self, conf, max_hamming_set):
-        self.data_path = conf.data_path  # path to hd5f file
-        self.img_generator = H5Generator(self.data_path)
+        self.data_path = conf.data_path  # path to dataset folder
+        self.img_generator = ImageGenerator(self.data_path)  # generates the instance to dataset files
         self.numChannels = conf.numChannels  # num of input image channels
         self.numCrops = conf.numCrops  # num of jigsaw crops
         self.original_dim = conf.original_dim  # size of the input image
@@ -106,31 +67,22 @@ class CropsGenerator:
         self.tileSize = conf.tileSize  # size of tile in cell (64)
         self.colorJitter = conf.colorJitter  # number of pixels for color jittering
         self.batchSize = conf.batchSize  # training_batch_size
-        self.val_batch_size = conf.val_batch_size
-        self.conf = conf
-        self.meanTensor, self.stdTensor = self.get_stats()
+        self.val_batch_size = conf.val_batch_size  # validation batch size
+        self.meanTensor, self.stdTensor = self.get_stats()  # get stats from dataset info
         # the <max_hamming_set> comes from file generated by <generate_hamming_set>. For further information see it.
         self.maxHammingSet = np.array(max_hamming_set, dtype=np.uint8)
-        self.numClasses = conf.hammingSetSize  # number of different jigsaw classes (5)
+        self.numClasses = conf.hammingSetSize  # number of different jigsaw classes
 
-        # shapes of datasets (train, validation, test):
-        # (70000, 256, 256, 3)
-        # (25000, 256, 256, 3)
-        # (5000, 256, 256, 3)
         # do not retrieve info about dataset with h5f['train_img'][:].shape since it loads the whole dataset into RAM
         self.num_train_batch = self.img_generator.h5f['train_dim'][...].astype(np.int32) // self.batchSize
         self.num_val_batch = self.img_generator.h5f['val_dim'][...].astype(np.int32) // self.batchSize
         self.num_test_batch = self.img_generator.h5f['test_dim'][...].astype(np.int32) // self.batchSize
-        # self.num_train_batch = conf.N_train_imgs // self.batchSize
-        # self.num_val_batch = conf.N_val_imgs // self.batchSize
-        # self.num_test_batch = conf.N_test_imgs // self.batchSize
 
     def get_stats(self):
         """
         Return mean and std from dataset. It has been memorized. If not mean or std have been saved a KeyError is raised.
         :return:
         """
-        # with h5py.File(self.data_path, 'r') as h5f:
         mean = self.img_generator.h5f['train_mean'][:].astype(np.float32)
         std = self.img_generator.h5f['train_std'][:].astype(np.float32)
         if self.numChannels == 1:
@@ -139,8 +91,16 @@ class CropsGenerator:
         return mean, std
 
     def one_crop(self, hm_index, crop_x, crop_y, x):
-        # It's sort of the contrary wrt previous behaviour. Now we find the hm_index crop we want to locate and
-        # we create its cropping. Then we stack in order, so the hamming_set order is kept.
+        """
+        This function creates one cropping at a time.
+        It's sort of the contrary wrt previous behaviour. Now we find the hm_index crop we want to locate and we create
+        it. As the result is stacked in the first axis, the order is kept as the label requires.
+        :param hm_index: permutation index in the hamming set
+        :param crop_x: x position for the 225 initial crop of the image
+        :param crop_y: x position for the 225 initial crop of the image
+        :param x: original image
+        :return: one crop
+        """
 
         # Define behaviour of col and rows to keep compatibility with previous code
         col = tf.math.mod(hm_index, 3)
@@ -186,9 +146,10 @@ class CropsGenerator:
         0    1    2
         3    4    5
         6    7    8
-        :param x = 3D numpy array
-        :param perm_index = index of referred permutation in max_hamming_set
-        :return array of croppings (<num_croppings>) made of (heigh x width x colour channels) arrays
+        :param x:
+        :param y:
+        :param hamming_set:
+        :return:
         """
         # retrieve shape of image
         y_dim, x_dim = x.shape[:2]
@@ -212,13 +173,15 @@ class CropsGenerator:
         x = tf.transpose(croppings, [1, 2, 3, 0])
         return x, tf.one_hot(y, self.numClasses)
 
-    def normalize_image(self, x: tf.Tensor, y: tf.Tensor, z):
+    def normalize_image(self, x: tf.Tensor, perm_index: tf.Tensor, hamming_set):
         """
         Normalize data one image at a time
         :param x: is a single images.
-        :return:
+        :param perm_index:
+        :param hamming_set:
+        :return: image, normalized wrt dataset mean and std
         """
-        # make it greyscale with probability 0.3% as in the paper
+        # make it greyscale with probability 0.3%
         if random.random() < 0.3:
             x = 0.21 * x[..., 2] + 0.72 * x[..., 1] + 0.07 * x[..., 0]
             # expanding dimension to preserve net layout
@@ -229,7 +192,7 @@ class CropsGenerator:
         x = tf.math.subtract(x, self.meanTensor)
         x = tf.math.divide(x, self.stdTensor)
 
-        return x, y, z
+        return x, perm_index, hamming_set
 
     def color_channel_jitter(self, img):
         """
@@ -244,7 +207,31 @@ class CropsGenerator:
             tf.roll(img[:, :, 2], b_jit, axis=0)
         ), axis=2)
 
+    def parse_path(self, path: tf.Tensor) -> (tf.Tensor, tf.Tensor, tf.Tensor):
+        """
+        Read image from disk and apply a label to it
+        :param path: path to one image. This is a tf.Tensor and contains a string
+        :return:
+        """
+        # read image from disk
+        img = tf.io.read_file(path)
+        # decode it as jpeg
+        img = tf.image.decode_jpeg(img, channels=3)
+        # cast to tensor with type tf.float32
+        img = tf.cast(img, dtype=tf.float32)
+
+        perm_index = int(random.randrange(self.numClasses))
+        hamming_set = tf.constant(self.maxHammingSet[perm_index], dtype=tf.float32)
+        perm_index = tf.constant(perm_index, dtype=tf.int32)
+        return img, perm_index, hamming_set
+
     def generate(self, mode='train'):
+        """
+        Generates the actual dataset. It uses all the functions defined above to read images from disk and create croppings.
+        :param mode: train-val-test
+        :return: tf.data.Dataset
+        """
+        parse_path_func = lambda x: self.parse_path(x)
         normalize_func = lambda x, y, z: self.normalize_image(x, y, z)
         create_croppings_func = lambda x, y, z: self.create_croppings(x, y, z)
 
@@ -253,13 +240,8 @@ class CropsGenerator:
         else:
             batch_size = self.batchSize
 
-        # h5f_label = mode + '_img'
-        dataset = (tf.data.Dataset.from_generator(
-            lambda: self.img_generator(mode, self.numClasses, self.maxHammingSet),  # generator
-            (tf.float32, tf.int32, tf.float32),  # input types
-            (tf.TensorShape([self.original_dim, self.original_dim, self.numChannels]),  # shapes of input types
-             tf.TensorShape(()),
-             tf.TensorShape([self.numCrops])))
+        dataset = (tf.data.Dataset.from_tensor_slices(self.img_generator(mode))
+                   .map(parse_path_func, num_parallel_calls=AUTOTUNE)
                    .map(normalize_func, num_parallel_calls=AUTOTUNE)  # normalize input for mean and std
                    .map(create_croppings_func, num_parallel_calls=AUTOTUNE)  # create actual one_crop
                    .batch(batch_size)  # defined batch_size
@@ -286,7 +268,7 @@ if __name__ == '__main__':
         # returns a batch of images
         tiles, labels = sess.run([x, labels])
         # select only one (choose which in [0, batchSize)
-        n_image = 10
+        n_image = 4
         image = np.array(tiles[n_image], dtype=np.float32)
         first_label = np.array(labels[n_image])
         # from one_hot to number

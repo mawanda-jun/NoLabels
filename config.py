@@ -8,7 +8,7 @@ flags.DEFINE_string('mode', 'train', 'train or test')
 flags.DEFINE_string('model', 'alexnet', 'matrix_capsule or vector_capsule or alexnet')
 
 # hamming set
-flags.DEFINE_integer('hammingSetSize', 10, 'Hamming set size')
+flags.DEFINE_integer('hammingSetSize', 100, 'Hamming set size')
 flags.DEFINE_string('selectionMethod', 'max', 'max or mean')
 flags.DEFINE_string('hammingFileName', 'max_hamming_set_', 'Name of the file to be saved')
 
@@ -31,14 +31,14 @@ flags.DEFINE_float('init_lr', 1e-4, 'Initial learning dropout_rate')
 flags.DEFINE_float('lr_min', 1e-6, 'Minimum learning dropout_rate')
 
 # data
-flags.DEFINE_string('data_path', 'Dataset/resources/h5_files/ILSVRC_5e5.h5', 'Data path')
+flags.DEFINE_string('data_path', 'Dataset/resources/images/ILSVRC_1000', 'Data path')
 flags.DEFINE_integer('height', 64, 'Input height size')
 flags.DEFINE_integer('width', 64, 'Input width size')
 flags.DEFINE_integer('numChannels', 3, 'Input channel size')
 
 # Directories and settings
-flags.DEFINE_string('resources', os.path.join('resources', 'h5_files'), 'Path to h5 files folder')
-flags.DEFINE_string('run_name', 'run01', 'Run name')
+flags.DEFINE_string('resources', os.path.join('resources', 'hamming_sets'), 'Path to h5 files folder')
+flags.DEFINE_string('run_name', 'prova', 'Run name')
 flags.DEFINE_string('trial_dir', os.path.join('ResultsJPS'), 'Results saving directory')
 flags.DEFINE_string('model_name', 'model', 'Model file name')
 flags.DEFINE_integer('reload_step', 0, 'Reload step to continue training')
