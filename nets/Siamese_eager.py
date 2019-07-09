@@ -99,7 +99,7 @@ class Siamese(tf.keras.Model):
         # generate instances of the same AlexNet object. In this way the weights are shared
         # self.alex_block = [self.alex for _ in range(9)]
         # create last layers. We create them here so they are counted in model.summary() method
-        self.dense = layers.Dense(4096, activation='relu', name='FC7', input_shape=(256*6*6, 1024))
+        self.dense = layers.Dense(4096, activation='relu', name='FC7')
         self.bn = layers.BatchNormalization(momentum=0.9, name='Batch_norm_last')
         self.dropout = layers.Dropout(0.5, name='last_dropout')
         self.classifier = layers.Dense(num_classes, activation='softmax', name='FC8')

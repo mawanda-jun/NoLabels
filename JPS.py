@@ -24,10 +24,10 @@ class JigsawPuzzleSolver:
 
         self.data_reader = CropsGenerator(conf, self.hamming_set)
 
-        if conf.reload_step == 0:
-            # if reload_step is not zero it means we are reading data from already existing folders
-            self.log_dir, self.model_dir, self.save_dir = self.set_dirs()
-        else:
+        # if reload_step is not zero it means we are reading data from already existing folders
+        self.log_dir, self.model_dir, self.save_dir = self.set_dirs()
+
+        if conf.reload_step > 0:
             # reload step is > 0, then we would like to retrieve weights from disk
             self.reload_weights()
 
@@ -116,5 +116,6 @@ class JigsawPuzzleSolver:
             steps_per_epoch=self.data_reader.num_train_batch,
             validation_steps=self.data_reader.num_val_batch,
             verbose=1,
-            callbacks=self.setup_callables()
+            callbacks=self.setup_callables(),
+            initial_epoch=self.conf.reload_step
         )
