@@ -25,17 +25,17 @@ class H5Generator:
         """
         self.h5f = h5py.File(file, 'r')  # it will be closed when the context will be terminated
         # Preload slice of dataset to get faster access to dataset. Test dataset is not preload on default.
-        self.b_dim = 2000
+        self.b_dim = 2500  # division per all datasets must be equal to 0
         self.buffer = {
-            'train0': self.h5f['train_img'][0 * self.b_dim:self.b_dim],
-            'train1': self.h5f['train_img'][self.b_dim:2 * self.b_dim],
-            'val0': self.h5f['val_img'][0 * self.b_dim:self.b_dim],
-            'val1': self.h5f['val_img'][self.b_dim:self.b_dim:2 * self.b_dim],
+            'train0': [],
+            'train1': [],
+            'val0': [],
+            'val1': [],
             'test0': [],
             'test1': [],
-            'train_index': 1,  # two buffers are already been loaded
+            'train_index': 1,  # two buffers are already loaded
             'train_max': self.h5f['train_dim'][...].astype(np.int32) // self.b_dim,
-            'val_index': 1,  # two buffers are already been loaded
+            'val_index': 1,  # two buffers are already loaded
             'val_max': self.h5f['val_dim'][...].astype(np.int32) // self.b_dim,
             'test_index': 0,
             'test_max': self.h5f['test_dim'][...].astype(np.int32) // self.b_dim,
@@ -47,6 +47,13 @@ class H5Generator:
         self.task2 = None
 
     def __call__(self, mode, num_classes, hamming_set, *args, **kwargs):
+        if not self.buffer[mode + '0']:
+            self.buffer[mode + '0'] = self.h5f[mode + '_img'][0 * self.b_dim:self.b_dim]
+            self.buffer[mode + '1'] = self.h5f[mode + '_img'][self.b_dim:2 * self.b_dim]
+            self.buffer[mode + '_index'] = 1
+            self.task1 = None
+            self.task2 = None
+
         # continue until tasks are finished. Repeat() should call the function again
         while self.buffer[mode + '_index'] < self.buffer[mode + '_max']:
             # this is the first round, so self.task2 would be empty
@@ -54,34 +61,33 @@ class H5Generator:
                 # command to wait execution of self.task2. This would never be a big await
                 self.loop.run_until_complete(self.task2)
             # load images form buffer 0
+
             for img in self.buffer[mode + '0']:
                 perm_index = int(random.randrange(num_classes))
                 yield img, perm_index, hamming_set[perm_index]
 
             # buffer0 is now finished: we increment its index, order to refill it with self.task1, then we go to the next
             # buffer
-            self.buffer[mode + '_index'] += 1
             self.task1 = self.loop.create_task(self.fill_buffer(mode, '0'))
+
             # Quando ha finito la prima parte vuol dire che il buffer0 e' vuoto e si va sul buffer1 per non perdere prestazioni
             # nel frattempo si ricarica il buffer0
             for img in self.buffer[mode + '1']:
                 perm_index = int(random.randrange(num_classes))
                 yield img, perm_index, hamming_set[perm_index]
-            self.buffer[mode + '_index'] += 1
             self.loop.run_until_complete(self.task1)
             self.task2 = self.loop.create_task(self.fill_buffer(mode, '1'))
         # when the dataset has been iterated wholly it starts again from 0
-        self.buffer[mode + '_index'] = 0
 
     async def fill_buffer(self, mode, n_buffer):
         try:
             self.buffer[mode + n_buffer] = \
                 self.h5f[mode + '_img'][
-                self.buffer[mode + '_index'] * self.b_dim:(self.buffer[mode + '_index'] + 1) * self.b_dim]
+                (self.buffer[mode + '_index'] + 2) * self.b_dim:(self.buffer[mode + '_index'] + 3) * self.b_dim]
         except IndexError:
-            # non serve fare nulla: il while posto sopra da' gia' sicurezza di uscita dal ciclo qualora si cerchi di
-            # caricare una porzione non accessibile.
-            pass
+            self.buffer[mode + n_buffer] = []
+        finally:
+            self.buffer[mode + '_index'] += 1
 
 
 class CropsGenerator:
@@ -204,7 +210,7 @@ class CropsGenerator:
         croppings = tf.map_fn(one_crop_func, hamming_set)
         # change order of axis (move one_crop dimension from first to last)
         x = tf.transpose(croppings, [1, 2, 3, 0])
-        return x, y
+        return x, tf.one_hot(y, self.numClasses)
 
     def normalize_image(self, x: tf.Tensor, y: tf.Tensor, z):
         """
@@ -214,10 +220,7 @@ class CropsGenerator:
         """
         # make it greyscale with probability 0.3% as in the paper
         if random.random() < 0.3:
-            b = x[..., 0]
-            g = x[..., 1]
-            r = x[..., 2]
-            x = 0.21 * r + 0.72 * g + 0.07 * b
+            x = 0.21 * x[..., 2] + 0.72 * x[..., 1] + 0.07 * x[..., 0]
             # expanding dimension to preserve net layout
             x = tf.expand_dims(x, axis=-1)
             x = tf.concat([x, x, x], axis=-1)
@@ -228,36 +231,22 @@ class CropsGenerator:
 
         return x, y, z
 
-    def one_hot(self, x, y):
-        """
-        OneHot encoding for y label.
-        :param y: label
-        :return: y in the format of OneHot
-        """
-        return x, tf.one_hot(y, self.numClasses)
-
     def color_channel_jitter(self, img):
         """
         Spatial image jitter, aka movement of color channel in various manners
         """
-        if self.colorJitter == 0:
-            return img
         r_jit = random.randrange(-self.colorJitter, self.colorJitter)
         g_jit = random.randrange(-self.colorJitter, self.colorJitter)
         b_jit = random.randrange(-self.colorJitter, self.colorJitter)
-        R = img[:, :, 0]
-        G = img[:, :, 1]
-        B = img[:, :, 2]
         return tf.stack((
-            tf.roll(R, r_jit, axis=0),
-            tf.roll(G, g_jit, axis=1),
-            tf.roll(B, b_jit, axis=0)
+            tf.roll(img[:, :, 0], r_jit, axis=0),
+            tf.roll(img[:, :, 1], g_jit, axis=1),
+            tf.roll(img[:, :, 2], b_jit, axis=0)
         ), axis=2)
 
     def generate(self, mode='train'):
         normalize_func = lambda x, y, z: self.normalize_image(x, y, z)
         create_croppings_func = lambda x, y, z: self.create_croppings(x, y, z)
-        onehot_func = lambda x, y: self.one_hot(x, y)
 
         if mode == 'val':
             batch_size = self.val_batch_size
@@ -273,7 +262,6 @@ class CropsGenerator:
              tf.TensorShape([self.numCrops])))
                    .map(normalize_func, num_parallel_calls=AUTOTUNE)  # normalize input for mean and std
                    .map(create_croppings_func, num_parallel_calls=AUTOTUNE)  # create actual one_crop
-                   .map(onehot_func, num_parallel_calls=AUTOTUNE)  # convert label into one_hot encoding
                    .batch(batch_size)  # defined batch_size
                    .prefetch(AUTOTUNE)  # number of batches to be prefetch.
                    .repeat()  # repeats the dataset when it is finished
@@ -284,7 +272,8 @@ class CropsGenerator:
 # UNCOMMENT ADDITION AND DIVISION PER MEAN AND STD BEFORE TRY TO SEE IMAGES
 if __name__ == '__main__':
     os.chdir(os.pardir)
-    with h5py.File(os.path.join('Dataset', conf.resources, conf.hammingFileName + str(conf.hammingSetSize) + '.h5'), 'r') as h5f:
+    with h5py.File(os.path.join('Dataset', conf.resources, conf.hammingFileName + str(conf.hammingSetSize) + '.h5'),
+                   'r') as h5f:
         HammingSet = np.array(h5f['max_hamming_set'])
 
     data_reader = CropsGenerator(conf, HammingSet)
@@ -307,10 +296,10 @@ if __name__ == '__main__':
         complete = np.zeros((192, 192, 3))
         tile_size = data_reader.tileSize
         for i, v in enumerate(data_reader.maxHammingSet[lbl]):
-            row = int(v/3)
+            row = int(v / 3)
             col = v % 3
-            y_start = row*tile_size
-            x_start = col*tile_size
+            y_start = row * tile_size
+            x_start = col * tile_size
             complete[y_start:y_start + tile_size, x_start:x_start + tile_size] = image[:, :, :, i]
 
         Image.fromarray(np.array(complete, dtype=np.uint8)).show()
