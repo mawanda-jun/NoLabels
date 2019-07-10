@@ -1,6 +1,7 @@
 import tensorflow as tf
 from tensorflow.python.keras import layers
 from inspect import signature
+
 tf.enable_eager_execution()
 
 def loss_op(y_pred, y_true):
@@ -35,6 +36,7 @@ class AlexNet(tf.keras.layers.Layer):
             (),
         ]
 
+# TODO vedere layer in più rispetto a paper
     def build(self, input_shape=(-1, 64, 64, 3)):
         self.alexnet = [
             layers.Conv2D(96, 11, 2, 'same', activation='relu', name='CONV1', input_shape=input_shape),
