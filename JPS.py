@@ -95,7 +95,7 @@ class JigsawPuzzleSolver:
                                                    steps_per_epoch,
                                                    0.97,
                                                    staircase=False)
-        optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate)
+        optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate)
 
         # compile model with losses and metrics. Even if there is reloading, learning rate and optimizer state is
         # not saved (yet)
