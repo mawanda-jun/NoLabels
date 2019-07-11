@@ -15,7 +15,7 @@ NUM_CROPS = conf.numCrops
 NUM_PERMUTATIONS = conf.hammingSetSize
 SELECTION = conf.selectionMethod
 FILENAME = conf.hammingFileName
-FOLDER = os.path.join('resources', 'h5_files')
+FOLDER = conf.resources
 
 
 def hamming_set(num_crops=NUM_CROPS, num_permutations=NUM_PERMUTATIONS, selection=SELECTION, filename=FILENAME):
