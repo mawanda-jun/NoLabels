@@ -13,9 +13,26 @@ class AlexNet(tf.keras.layers.Layer):
     """
     Create a super-layer made up of "Alex". self.alexnet is a list of layers to be built
     """
-    def __init__(self, name, **kwargs):
+    def __init__(self, name, input_shape, **kwargs):
         super(AlexNet, self).__init__(name, **kwargs)
-        self.alexnet = []
+        self.alexnet = [
+            layers.Conv2D(96, 11, 2, 'same', activation='relu', name='CONV1', input_shape=input_shape),
+            layers.BatchNormalization(momentum=0.9, name="batch_norm_1"),
+            layers.MaxPool2D(3, 2, 'same', name='MaxPool1'),
+
+            layers.Conv2D(256, 5, 2, 'same', activation='relu', name='CONV2'),
+            layers.BatchNormalization(momentum=0.9, name="batch_norm_2"),
+            layers.MaxPool2D(3, 2, 'same', name='MaxPool2'),
+
+            layers.Conv2D(384, 3, 1, 'same', activation='relu', name='CONV3'),
+            layers.Conv2D(384, 3, 1, 'same', activation='relu', name='CONV4'),
+            layers.Conv2D(256, 3, 1, 'same', activation='relu', name='CONV5'),
+            layers.MaxPool2D(3, 2, 'same', name='MaxPool3'),
+
+            layers.Flatten(),
+            layers.Dense(1024, activation='relu', name='FC6'),
+            layers.Dropout(0.5)
+        ]
         self.flatten_out = None
         self.config = {}
         # trainable parameters in form of output shape for every layer in AlexNet
@@ -35,28 +52,10 @@ class AlexNet(tf.keras.layers.Layer):
             (),
         ]
 
-    def build(self, input_shape=(-1, 64, 64, 3)):
-        self.alexnet = [
-            layers.Conv2D(96, 11, 2, 'same', activation='relu', name='CONV1', input_shape=input_shape),
-            layers.BatchNormalization(momentum=0.9, name="batch_norm_1"),
-            layers.MaxPool2D(3, 2, 'same', name='MaxPool1'),
-
-            layers.Conv2D(256, 5, 2, 'same', activation='relu', name='CONV2'),
-            layers.BatchNormalization(momentum=0.9, name="batch_norm_2"),
-            layers.MaxPool2D(3, 2, 'same', name='MaxPool2'),
-
-            layers.Conv2D(384, 3, 1, 'same', activation='relu', name='CONV3'),
-            layers.Conv2D(384, 3, 1, 'same', activation='relu', name='CONV4'),
-            layers.Conv2D(256, 3, 1, 'same', activation='relu', name='CONV5'),
-            layers.MaxPool2D(3, 2, 'same', name='MaxPool3'),
-
-            layers.Flatten(),
-            layers.Dense(1024, activation='relu', name='FC6'),
-            layers.Dropout(0.5)
-        ]
-        for i, layer in enumerate(self.alexnet):
+    # def build(self, input_shape=(-1, 64, 64, 3)):
+    #     for i, layer in enumerate(self.alexnet):
             # adds the weights for model.summary(). These are not going to be trained
-            self.add_weight(name=layer.name, shape=self.shapes[i])
+            # self.add_weight(name=layer.name, shape=self.shapes[i])
 
     def get_config(self):
         return self.config
@@ -88,7 +87,7 @@ class Siamese(tf.keras.Model):
     """
     def __init__(self, num_classes, **kwargs):
         super(Siamese, self).__init__(**kwargs)
-        self.alex = AlexNet('alex')
+        self.alex = AlexNet('alex', (-1, 64, 64, 3))
         # generate instances of the same AlexNet object. In this way the weights are shared
         # self.alex_block = [self.alex for _ in range(9)]
         # create last layers. We create them here so they are counted in model.summary() method
