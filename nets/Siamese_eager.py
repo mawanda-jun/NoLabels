@@ -13,11 +13,8 @@ class AlexNet(tf.keras.layers.Layer):
     """
     Create a super-layer made up of "Alex". self.alexnet is a list of layers to be built
     """
-    def __init__(self, name, **kwargs):
-        super(AlexNet, self).__init__(name=name, **kwargs)
-        self.alexnet = []
-
-    def build(self, input_shape=(-1, 64, 64, 3)):
+    def __init__(self, name, input_shape, **kwargs):
+        super(AlexNet, self).__init__(name, **kwargs)
         self.alexnet = [
             layers.Conv2D(96, 11, 2, 'same', activation='relu', name='CONV1', input_shape=input_shape),
             layers.BatchNormalization(momentum=0.9, name="batch_norm_1"),
@@ -36,19 +33,29 @@ class AlexNet(tf.keras.layers.Layer):
             layers.Dense(1024, activation='relu', name='FC6'),
             layers.Dropout(0.5)
         ]
+        self.flatten_out = None
+        self.config = {}
+        # trainable parameters in form of output shape for every layer in AlexNet
+        self.shapes = [
+            (11, 11, 3, 96),
+            (96,),
+            (),
+            (5, 5, 3, 256),
+            (256, ),
+            (),
+            (3, 3, 3, 384),
+            (3, 3, 3, 384),
+            (3, 3, 3, 256),
+            (),
+            (),
+            (256*6*6, 1024),
+            (),
+        ]
 
-    @staticmethod
-    def compute_alex(alexnet, inputs, training):
-        # for each layer of alex
-        x = alexnet[0](inputs)  # compute first output
-        for layer in alexnet[1:]:
-            # invoke every layer with the output. We need to check the signature of every layer: dropout and batch_norm
-            # accept also the 'training' parameter, which deactivate the layer in case of validation or test
-            if 'training' not in str(signature(layer.call)):
-                x = layer(x)
-            else:
-                x = layer(x, training)
-        return x
+    # def build(self, input_shape=(-1, 64, 64, 3)):
+    #     for i, layer in enumerate(self.alexnet):
+            # adds the weights for model.summary(). These are not going to be trained
+            # self.add_weight(name=layer.name, shape=self.shapes[i])
 
     def get_config(self):
         return self.config
@@ -63,12 +70,15 @@ class AlexNet(tf.keras.layers.Layer):
         :param mask:
         :return:
         """
-        x = tf.unstack(inputs, axis=-1)
-        alexes = []
-        for i in range(9):
-            # it should reuse the variables inside alex_block
-            alexes.append(self.compute_alex(self.alexnet, x[i], training))
-        return tf.concat(alexes, axis=1)
+        x = self.alexnet[0](inputs)  # compute first output
+        for layer in self.alexnet[1:]:
+            # invoke every layer with the output. We need to check the signature of every layer: dropout and batch_norm
+            # accept also the 'training' parameter, which deactivate the layer in case of validation or test
+            if 'training' not in str(signature(layer.call)):
+                x = layer(x)
+            else:
+                x = layer(x, training)
+        return x
 
 
 class Siamese(tf.keras.Model):
@@ -77,8 +87,11 @@ class Siamese(tf.keras.Model):
     """
     def __init__(self, num_classes, **kwargs):
         super(Siamese, self).__init__(**kwargs)
-        self.alexes = AlexNet('alex')
-        self.dense = layers.Dense(4096, activation='relu', name='FC7')
+        self.alex = AlexNet('alex', (-1, 64, 64, 3))
+        # generate instances of the same AlexNet object. In this way the weights are shared
+        # self.alex_block = [self.alex for _ in range(9)]
+        # create last layers. We create them here so they are counted in model.summary() method
+        self.dense = layers.Dense(4096, activation='relu', name='FC7', input_shape=(256*6*6, 1024))
         self.bn = layers.BatchNormalization(momentum=0.9, name='Batch_norm_last')
         self.dropout = layers.Dropout(0.5, name='last_dropout')
         self.classifier = layers.Dense(num_classes, activation='softmax', name='FC8')
@@ -91,8 +104,15 @@ class Siamese(tf.keras.Model):
         :param mask:
         :return:
         """
-        x = self.alexes(inputs, training)
-        x = self.dense(x)
+        alex_block = [self.alex for _ in range(9)]
+        x = tf.unstack(inputs, axis=-1)
+        alexes = []
+        for i in range(9):
+            # it should reuse the variables inside alex_block
+            alexes.append(alex_block[i](x[i], training))
+        siamese_block = tf.concat(alexes, axis=1)
+
+        x = self.dense(siamese_block)
         x = self.bn(x, training)
         x = self.dropout(x, training)
         logits = self.classifier(x)
