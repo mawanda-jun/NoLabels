@@ -41,7 +41,7 @@ class ImageGenerator:
         self.h5f = h5py.File(os.path.join(data_path, 'info.h5'),
                              'r')  # it will be closed when the context will be terminated
 
-    def __call__(self, dataset_type, *args, **kwargs):
+    def __call__(self, dataset_type, num_classes, *args, **kwargs):
         """
         Instance is called with different dataset_type
         :param dataset_type:
@@ -49,13 +49,16 @@ class ImageGenerator:
         :param kwargs:
         :return:
         """
-        return images_in_paths(os.path.join(self.data_path, dataset_type))
+        paths = images_in_paths(os.path.join(self.data_path, dataset_type))
+        labels = [random.randrange(num_classes) for _ in paths]
+        return paths, labels
 
 
 class CropsGenerator:
     """
     CropsGenerator takes care to load images from disk and convert, crop and serve them as a tf.data.Dataset
     """
+
     def __init__(self, conf, max_hamming_set):
         self.data_path = conf.data_path  # path to dataset folder
         self.img_generator = ImageGenerator(self.data_path)  # generates the instance to dataset files
@@ -112,8 +115,10 @@ class CropsGenerator:
         # create tf.constant to keep compatibility
         crop_x = tf.constant(crop_x, dtype=tf.float32)
         crop_y = tf.constant(crop_y, dtype=tf.float32)
-        random_x = tf.constant(random.randrange(self.cellSize - self.tileSize), dtype=tf.float32)
-        random_y = tf.constant(random.randrange(self.cellSize - self.tileSize), dtype=tf.float32)
+        # random_x = tf.constant(random.randrange(self.cellSize - self.tileSize), dtype=tf.float32)
+        random_x = float(random.randrange(self.cellSize - self.tileSize))
+        # random_y = tf.constant(random.randrange(self.cellSize - self.tileSize), dtype=tf.float32)
+        random_y = float(random.randrange(self.cellSize - self.tileSize))
         cell_size = tf.constant(self.cellSize, dtype=tf.float32)
         tile_size = tf.constant(self.tileSize, dtype=tf.float32)
 
@@ -207,7 +212,7 @@ class CropsGenerator:
             tf.roll(img[:, :, 2], b_jit, axis=0)
         ), axis=2)
 
-    def parse_path(self, path: tf.Tensor) -> (tf.Tensor, tf.Tensor, tf.Tensor):
+    def parse_path(self, path: tf.Tensor, label: tf.Tensor) -> (tf.Tensor, tf.Tensor, tf.Tensor):
         """
         Read image from disk and apply a label to it
         :param path: path to one image. This is a tf.Tensor and contains a string
@@ -220,10 +225,12 @@ class CropsGenerator:
         # cast to tensor with type tf.float32
         img = tf.cast(img, dtype=tf.float32)
 
-        perm_index = int(random.randrange(self.numClasses))
-        hamming_set = tf.constant(self.maxHammingSet[perm_index], dtype=tf.float32)
-        perm_index = tf.constant(perm_index, dtype=tf.int32)
-        return img, perm_index, hamming_set
+        # perm_index = int(random.randrange(self.numClasses))
+        # hamming_set = tf.constant(self.maxHammingSet[perm_index], dtype=tf.float32)
+        # hamming_set = np.array(self.maxHammingSet[perm_index], dtype=np.float32)
+        hamming_set = tf.cast(tf.gather(self.maxHammingSet, label), dtype=tf.float32)
+        # perm_index = tf.constant(perm_index, dtype=tf.int32)
+        return img, label, hamming_set
 
     def generate(self, mode='train'):
         """
@@ -231,16 +238,19 @@ class CropsGenerator:
         :param mode: train-val-test
         :return: tf.data.Dataset
         """
-        parse_path_func = lambda x: self.parse_path(x)
+        parse_path_func = lambda x, y: self.parse_path(x, y)
         normalize_func = lambda x, y, z: self.normalize_image(x, y, z)
         create_croppings_func = lambda x, y, z: self.create_croppings(x, y, z)
 
         if mode == 'val':
             batch_size = self.val_batch_size
+            n_el = self.num_val_batch
         else:
             batch_size = self.batchSize
+            n_el = self.num_train_batch
 
-        dataset = (tf.data.Dataset.from_tensor_slices(self.img_generator(mode))
+        dataset = (tf.data.Dataset.from_tensor_slices(self.img_generator(mode, self.numClasses))
+                   .shuffle(buffer_size=n_el * batch_size)
                    .map(parse_path_func, num_parallel_calls=AUTOTUNE)
                    .map(normalize_func, num_parallel_calls=AUTOTUNE)  # normalize input for mean and std
                    .map(create_croppings_func, num_parallel_calls=AUTOTUNE)  # create actual one_crop
