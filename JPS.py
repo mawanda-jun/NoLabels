@@ -117,5 +117,6 @@ class JigsawPuzzleSolver:
             validation_steps=self.data_reader.num_val_batch,
             verbose=1,
             callbacks=self.setup_callables(),
-            initial_epoch=self.conf.reload_step
+            initial_epoch=self.conf.reload_step,
+            shuffle=True
         )
