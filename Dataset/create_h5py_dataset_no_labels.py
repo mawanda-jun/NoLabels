@@ -49,9 +49,8 @@ class ThreadedImageWriter(threading.Thread):
         self.img_folder = os.path.join(dataset_folder, set_type)
         os.makedirs(self.img_folder, exist_ok=True)
         self.read_errors = set([])
-        self.training_mean_new = np.zeros((self.img_size, self.img_size, 3), dtype=np.float32)
-        self.training_mean_old = np.zeros((self.img_size, self.img_size, 3), dtype=np.float32)
-        self.training_variance = np.zeros((self.img_size, self.img_size, 3), dtype=np.float32)
+        self.mean = np.zeros((self.img_size, self.img_size, 3), dtype=np.float32)
+        self.M2 = np.zeros((self.img_size, self.img_size, 3), dtype=np.float32)
 
     def run(self):
         for i, path in enumerate(self.img_list):
@@ -77,19 +76,10 @@ class ThreadedImageWriter(threading.Thread):
                     if self.set_type == 'train':
                         # Welford method for online calculation of mean and variance
                         if i > 0:
-                            self.training_mean_new = self.training_mean_old + \
-                                                (np_img - self.training_mean_old) / (i+1)
-
-                            self.training_variance = self.training_variance + \
-                                                (np_img - self.training_mean_old) * \
-                                                (np_img - self.training_mean_new)
-                            self.training_mean_old = self.training_mean_new
-                        else:
-                            self.training_mean_old = np.array(np_img, dtype=np.float32)
-                    else:
-                        self.training_mean_new = None
-                        self.training_mean_old = None
-                        self.training_variance = None
+                            # Welford method for online calculation of mean and variance
+                            delta = np.subtract(np_img, self.mean)
+                            self.mean = np.add(self.mean, np.divide(delta, (i + 1)))
+                            self.M2 = np.add(self.M2, np.multiply(delta, np.subtract(np_img, self.mean)))
                     # write images inside h5 file
                     # self.hdf5_out[self.set_type + '_img'][i, ...] = np_img
                     # Image.from_array(np_img).save(os.path.join(dataset_folder, self.type, self.type+str(i)+'.jpg')
@@ -180,10 +170,10 @@ def generate_dataset(file_list: List, dataset_folder: str, img_size=256, train_d
             if thread.read_errors:
                 with open('errors{}.txt'.format(i), 'w') as f:
                     f.writelines(thread.read_errors)
-            if thread.training_variance is not None:
+            if thread.set_type == 'train':
                 # calculate the std using the variace array only for train set
-                training_std = np.sqrt(thread.training_variance / (len(file_dict['train']) - 1))
-                hdf5_out['train_mean'][...] = thread.training_mean_new
+                training_std = np.sqrt(thread.M2 / (len(file_dict['train']) - 1))
+                hdf5_out['train_mean'][...] = thread.mean
                 hdf5_out['train_std'][...] = training_std
 
 

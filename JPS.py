@@ -99,10 +99,12 @@ class JigsawPuzzleSolver:
 
         # compile model with losses and metrics. Even if there is reloading, learning rate and optimizer state is
         # not saved (yet)
+        loss = tf.keras.losses.CategoricalCrossentropy()
+        acc = tf.keras.metrics.CategoricalAccuracy()
         self.model.compile(
             optimizer=optimizer,
-            loss='categorical_crossentropy',
-            metrics=['categorical_accuracy']
+            loss=loss,
+            metrics=[acc]
         )
 
         # print summary of the network
@@ -117,5 +119,5 @@ class JigsawPuzzleSolver:
             validation_steps=self.data_reader.num_val_batch,
             verbose=1,
             callbacks=self.setup_callables(),
-            initial_epoch=self.conf.reload_step
+            initial_epoch=self.conf.reload_step,
         )
