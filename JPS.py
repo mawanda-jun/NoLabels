@@ -135,7 +135,7 @@ class JigsawPuzzleSolver:
                 self.data_reader.generate('test'),
                 verbose=1,
                 callbacks=[CSVLogger(os.path.join(self.log_dir, 'test_log.csv'), append=True, separator=';')],
-                steps=self.data_reader.num_test_batch // self.data_reader.batchSize
+                steps=self.data_reader.num_test_batch
             )
         else:
             raise FileNotFoundError('Weight not found. Please double check trial_dir, run_name and eval_weight')

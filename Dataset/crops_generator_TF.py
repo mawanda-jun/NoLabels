@@ -78,7 +78,7 @@ class CropsGenerator:
 
         # do not retrieve info about dataset with h5f['train_img'][:].shape since it loads the whole dataset into RAM
         self.num_train_batch = self.img_generator.h5f['train_dim'][...].astype(np.int32) // self.batchSize
-        self.num_val_batch = self.img_generator.h5f['val_dim'][...].astype(np.int32) // self.batchSize
+        self.num_val_batch = self.img_generator.h5f['val_dim'][...].astype(np.int32) // conf.val_batch_size
         self.num_test_batch = self.img_generator.h5f['test_dim'][...].astype(np.int32) // self.batchSize
 
     def get_stats(self):
@@ -224,6 +224,7 @@ class CropsGenerator:
         img = tf.image.decode_jpeg(img, channels=3)
         # cast to tensor with type tf.float32
         img = tf.cast(img, dtype=tf.float32)
+
 
         # perm_index = int(random.randrange(self.numClasses))
         # hamming_set = tf.constant(self.maxHammingSet[perm_index], dtype=tf.float32)
