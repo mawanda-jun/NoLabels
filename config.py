@@ -42,5 +42,6 @@ flags.DEFINE_string('run_name', 'prova', 'Run name')
 flags.DEFINE_string('trial_dir', os.path.join('ResultsJPS'), 'Results saving directory')
 flags.DEFINE_string('model_name', 'model', 'Model file name')
 flags.DEFINE_integer('reload_step', 0, 'Reload step to continue training')
+flags.DEFINE_string('eval_weight', 'weights.09-0.04.hdf5', 'Select the weight with which evaluate the model')
 
 conf = tf.flags.FLAGS

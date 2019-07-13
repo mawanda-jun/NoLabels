@@ -27,10 +27,6 @@ class JigsawPuzzleSolver:
         # if reload_step is not zero it means we are reading data from already existing folders
         self.log_dir, self.model_dir, self.save_dir = self.set_dirs()
 
-        if conf.reload_step > 0:
-            # reload step is > 0, then we would like to retrieve weights from disk
-            self.reload_weights()
-
     def build(self):
         # initialize model
         model = Siamese(self.conf.hammingSetSize)
@@ -87,7 +83,7 @@ class JigsawPuzzleSolver:
 
         return [checkpointer, csv_logger, tensorboard]
 
-    def train(self):
+    def compile_model(self):
         # set optimizer
         steps_per_epoch = self.data_reader.num_train_batch
         learning_rate = tf.train.exponential_decay(self.conf.init_lr,
@@ -107,6 +103,14 @@ class JigsawPuzzleSolver:
             metrics=[acc]
         )
 
+    def train(self):
+        # if reload step is > 0 we would like to retrieve pre-trained weights from disk
+        if self.conf.reload_step > 0:
+            self.reload_weights()
+
+        # set optimizer, loss and accuracy and compile model
+        self.compile_model()
+
         # print summary of the network
         self.model.summary()
 
@@ -121,3 +125,19 @@ class JigsawPuzzleSolver:
             callbacks=self.setup_callables(),
             initial_epoch=self.conf.reload_step,
         )
+
+    def evaluate(self):
+        weight_to_be_restored = os.path.join(self.model_dir, self.conf.eval_weight)
+        if os.path.isfile(weight_to_be_restored):
+            self.model.load_weights(weight_to_be_restored)
+            self.compile_model()
+            self.model.evaluate(
+                self.data_reader.generate('test'),
+                verbose=1,
+                callbacks=[CSVLogger(os.path.join(self.log_dir, 'test_log.csv'), append=True, separator=';')],
+                steps=self.data_reader.num_test_batch // self.data_reader.batchSize
+            )
+        else:
+            raise FileNotFoundError('Weight not found. Please double check trial_dir, run_name and eval_weight')
+
+
