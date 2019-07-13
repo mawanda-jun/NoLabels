@@ -131,12 +131,13 @@ class JigsawPuzzleSolver:
         if os.path.isfile(weight_to_be_restored):
             self.model.load_weights(weight_to_be_restored)
             self.compile_model()
-            self.model.evaluate(
+            results = self.model.evaluate(
                 self.data_reader.generate('test'),
                 verbose=1,
-                callbacks=[CSVLogger(os.path.join(self.log_dir, 'test_log.csv'), append=True, separator=';')],
                 steps=self.data_reader.num_test_batch
             )
+            with open(os.path.join(self.log_dir, 'test_log.csv'), 'w') as f:
+                f.write("test loss, test acc: {}".format(results))
         else:
             raise FileNotFoundError('Weight not found. Please double check trial_dir, run_name and eval_weight')
 
