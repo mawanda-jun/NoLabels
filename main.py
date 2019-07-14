@@ -17,8 +17,8 @@ elif mode == 'ft':
 
 def JPS(conf):
     model = JigsawPuzzleSolver(conf)
-    # model.train()
-    model.evaluate()
+    model.train()
+    # model.evaluate()
 
 
 def FT(conf_ft):
