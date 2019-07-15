@@ -137,10 +137,6 @@ class CropsGenerator:
         y_next = tf.cast(y_next, dtype=tf.int32)
         crop = x[y_start:y_next, x_start:x_next, :]
 
-        # make the crop distant from std deviation of the dataset
-        crop = tf.math.subtract(crop, self.meanTensor)
-        crop = tf.math.divide(crop, self.stdTensor)
-
         # spatial jittering of crop
         crop = self.color_channel_jitter(crop)
 
@@ -227,6 +223,11 @@ class CropsGenerator:
         img = tf.image.random_flip_up_down(img)
         # cast to tensor with type tf.float32
         img = tf.cast(img, dtype=tf.float32)
+
+        # make the image distant from std deviation of the dataset
+        img = tf.math.subtract(img, self.meanTensor)
+        img = tf.math.divide(img, self.stdTensor)
+
         # create hamming set from label
         hamming_set = tf.cast(tf.gather(self.maxHammingSet, label), dtype=tf.float32)
         return img, label, hamming_set
