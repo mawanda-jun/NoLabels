@@ -222,15 +222,13 @@ class CropsGenerator:
         img = tf.io.read_file(path)
         # decode it as jpeg
         img = tf.image.decode_jpeg(img, channels=3)
+        # data augmentation
+        img = tf.image.random_flip_left_right(img)
+        img = tf.image.random_flip_up_down(img)
         # cast to tensor with type tf.float32
         img = tf.cast(img, dtype=tf.float32)
-
-
-        # perm_index = int(random.randrange(self.numClasses))
-        # hamming_set = tf.constant(self.maxHammingSet[perm_index], dtype=tf.float32)
-        # hamming_set = np.array(self.maxHammingSet[perm_index], dtype=np.float32)
+        # create hamming set from label
         hamming_set = tf.cast(tf.gather(self.maxHammingSet, label), dtype=tf.float32)
-        # perm_index = tf.constant(perm_index, dtype=tf.int32)
         return img, label, hamming_set
 
     def generate(self, mode='train'):
