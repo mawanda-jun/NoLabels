@@ -119,9 +119,9 @@ class JigsawPuzzleSolver:
 
         # fit and validate model_on_input
         self.model.fit(
-            self.data_reader.generate(mode='train'),
+            self.data_reader.generate_train_set(),
             epochs=self.conf.max_epoch,
-            validation_data=self.data_reader.generate(mode='val'),
+            validation_data=self.data_reader.generate_val_set(),
             steps_per_epoch=self.data_reader.num_train_batch,
             validation_steps=self.data_reader.num_val_batch,
             verbose=1,
@@ -209,12 +209,12 @@ class JigsawPuzzleSolver:
         self.compile_model()
         # self.model_on_input.compile('adam', 'categorical_crossentropy', ['acc'])
         # self.model.train_on_batch(
-        #     self.data_reader.generate('train').take(1),
+        #     self.data_reader.generate_train_set('train').take(1),
         #     reset_metrics=False
         # )
         self.compile_model()
         results = self.model.evaluate(
-            self.data_reader.generate('test'),
+            self.data_reader.generate_val_set(),
             verbose=1,
             steps=self.data_reader.num_test_batch,
         )

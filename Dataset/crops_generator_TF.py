@@ -178,7 +178,7 @@ class CropsGenerator:
         x = tf.transpose(croppings, [1, 2, 3, 0])
         return x, tf.one_hot(y, self.numClasses)
 
-    def add_grayscale(self, x: tf.Tensor, perm_index: tf.Tensor, hamming_set, mode):
+    def add_grayscale(self, x: tf.Tensor, perm_index: tf.Tensor, hamming_set):
         """
         Normalize data one image at a time
         :param x: is a single images.
@@ -232,37 +232,65 @@ class CropsGenerator:
         hamming_set = tf.cast(tf.gather(self.maxHammingSet, label), dtype=tf.float32)
         return img, label, hamming_set
 
-    def generate(self, mode='train'):
+    def generate_train_set(self):
         """
         Generates the actual dataset. It uses all the functions defined above to read images from disk and create croppings.
         :param mode: train-val-test
         :return: tf.data.Dataset
         """
         parse_path_func = lambda x, y: self.parse_path(x, y)
-        add_grayscale_func = lambda x, y, z: self.add_grayscale(x, y, z, mode)
+        add_grayscale_func = lambda x, y, z: self.add_grayscale(x, y, z)
         create_croppings_func = lambda x, y, z: self.create_croppings(x, y, z)
 
-        add_grayscale = False
+        batch_size = self.batchSize
+        n_el = self.num_train_batch
 
-        if mode == 'val':
-            batch_size = self.val_batch_size
-            n_el = self.num_val_batch
-        elif mode == "train":
-            batch_size = self.batchSize
-            n_el = self.num_train_batch
-            add_grayscale = True
-        elif mode == "test":
-            batch_size = self.batchSize
-            n_el = self.num_test_batch
-        else:
-            raise ValueError("Bad mode. Choose between train, test or val")
+        return (tf.data.Dataset.from_tensor_slices(self.img_generator('train', self.numClasses))
+                .shuffle(buffer_size=n_el * batch_size)
+                .map(parse_path_func, num_parallel_calls=AUTOTUNE)
+                .map(add_grayscale_func, num_parallel_calls=AUTOTUNE)  # add grayscale img w/ p<0.3 in train
+                .map(create_croppings_func, num_parallel_calls=AUTOTUNE)  # create actual one_crop
+                .batch(batch_size)  # defined batch_size
+                .prefetch(AUTOTUNE)  # number of batches to be prefetch.
+                .repeat()  # repeats the dataset when it is finished
+                )
 
-        dataset = (tf.data.Dataset.from_tensor_slices(self.img_generator(mode, self.numClasses))
-                   .shuffle(buffer_size=n_el * batch_size)
-                   .map(parse_path_func, num_parallel_calls=AUTOTUNE))
-        if add_grayscale:
-            dataset = (dataset.map(add_grayscale_func, num_parallel_calls=AUTOTUNE))  # add grayscale img w/ p<0.3 in train
-        return (dataset
+    def generate_val_set(self):
+        """
+        Generates the actual dataset. It uses all the functions defined above to read images from disk and create croppings.
+        :param mode: train-val-test
+        :return: tf.data.Dataset
+        """
+        parse_path_func = lambda x, y: self.parse_path(x, y)
+        create_croppings_func = lambda x, y, z: self.create_croppings(x, y, z)
+
+        batch_size = self.val_batch_size
+        n_el = self.num_val_batch
+
+        return (tf.data.Dataset.from_tensor_slices(self.img_generator('val', self.numClasses))
+                .shuffle(buffer_size=n_el * batch_size)
+                .map(parse_path_func, num_parallel_calls=AUTOTUNE)
+                .map(create_croppings_func, num_parallel_calls=AUTOTUNE)  # create actual one_crop
+                .batch(batch_size)  # defined batch_size
+                .prefetch(AUTOTUNE)  # number of batches to be prefetch.
+                .repeat()  # repeats the dataset when it is finished
+                )
+
+    def generate_test_set(self):
+        """
+        Generates the actual dataset. It uses all the functions defined above to read images from disk and create croppings.
+        :param mode: train-val-test
+        :return: tf.data.Dataset
+        """
+        parse_path_func = lambda x, y: self.parse_path(x, y)
+        create_croppings_func = lambda x, y, z: self.create_croppings(x, y, z)
+
+        batch_size = self.batchSize
+        n_el = self.num_test_batch
+
+        return (tf.data.Dataset.from_tensor_slices(self.img_generator('test', self.numClasses))
+                .shuffle(buffer_size=n_el * batch_size)
+                .map(parse_path_func, num_parallel_calls=AUTOTUNE)
                 .map(create_croppings_func, num_parallel_calls=AUTOTUNE)  # create actual one_crop
                 .batch(batch_size)  # defined batch_size
                 .prefetch(AUTOTUNE)  # number of batches to be prefetch.
@@ -279,7 +307,7 @@ if __name__ == '__main__':
 
     data_reader = CropsGenerator(conf, HammingSet)
 
-    iter = data_reader.generate(mode='train').make_initializable_iterator()
+    iter = data_reader.generate_train_set().make_initializable_iterator()
     x, labels = iter.get_next()
 
     with tf.Session() as sess:
