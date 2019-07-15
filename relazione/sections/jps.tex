@@ -1,0 +1,12 @@
+\section{The Jigsaw Puzzle Problem}
+\textcolor{red}{"describe the data you are working with for your project. What type of data is it? Where did it come from? How much data are you working with? Did you have to do any preprocessing, filtering, or other special treatment to use this data in your project?"}
+
+An immediate approach to solve the Jigsaw puzzle is to stack the tiles of the puzzles along the axis of the color (so \(9\times3=27\) channels). However, with this approach the net is caused to learn only low-level texture similarities instead of high-level primitives. We as humans use kind of analogies between the tiles - like similar patterns or contiguous borders between pieces - as cues to solve jigsaw puzzles. However this learning does not require any understanding of the global object. Thus, we need a network that delays the computation of statistics across different tiles and that can find the parts arrangement using these features. The objective is to force the network to understand representative features that can discriminate the relative location of each part of an object.
+
+\subsection{The Context-Free Architecture}
+The solution found in the \textcolor{green}{paper} is to build a siamese convolutional network, where AlexNet (until layer \textit{fc6}) is used for each crop of the puzzle, with shared weights. The outputs of all \textit{fc6} layers are concatenated and given as input to the fully connected layer \textit{fc7}. In this way each patch is given to a different AlexNet separately, until the very last fully connected layer: the \textit{fc7} is responsible for the understanding of the rearrangement of the tiles - the context of the objet. This is why this network architecture has been called \textit{context-free}: each patch remains separated from the others until the last layer that handles the context of the object. \newline
+The performance of this architecture is similar to the AlexNet one in the classification task on the ImageNet 2012 dataset \textcolor{green}{8}. However the CFN is more compact than AlexNet: the first depends on \(27.5M\), the latter uses \(61M\). In addition the network can be used interchangeably for different tasks including detection and classification. \newline
+In the next section we show how to train the CFN for the Jigsaw Puzzle reassembly.
+
+\subsection{Training the CFN}
+\subsubsection{}
