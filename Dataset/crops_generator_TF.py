@@ -137,6 +137,10 @@ class CropsGenerator:
         y_next = tf.cast(y_next, dtype=tf.int32)
         crop = x[y_start:y_next, x_start:x_next, :]
 
+        # make the crop distant from std deviation of the dataset
+        crop = tf.math.subtract(crop, self.meanTensor)
+        crop = tf.math.divide(crop, self.stdTensor)
+
         # spatial jittering of crop
         crop = self.color_channel_jitter(crop)
 
@@ -178,7 +182,7 @@ class CropsGenerator:
         x = tf.transpose(croppings, [1, 2, 3, 0])
         return x, tf.one_hot(y, self.numClasses)
 
-    def normalize_image(self, x: tf.Tensor, perm_index: tf.Tensor, hamming_set):
+    def add_grayscale(self, x: tf.Tensor, perm_index: tf.Tensor, hamming_set, mode):
         """
         Normalize data one image at a time
         :param x: is a single images.
@@ -192,10 +196,6 @@ class CropsGenerator:
             # expanding dimension to preserve net layout
             x = tf.expand_dims(x, axis=-1)
             x = tf.concat([x, x, x], axis=-1)
-
-        # make the image distant from std deviation of the dataset
-        x = tf.math.subtract(x, self.meanTensor)
-        x = tf.math.divide(x, self.stdTensor)
 
         return x, perm_index, hamming_set
 
@@ -238,26 +238,30 @@ class CropsGenerator:
         :return: tf.data.Dataset
         """
         parse_path_func = lambda x, y: self.parse_path(x, y)
-        normalize_func = lambda x, y, z: self.normalize_image(x, y, z)
+        add_grayscale_func = lambda x, y, z: self.add_grayscale(x, y, z, mode)
         create_croppings_func = lambda x, y, z: self.create_croppings(x, y, z)
 
+        dataset = (tf.data.Dataset.from_tensor_slices(self.img_generator(mode, self.numClasses))
+                   .map(parse_path_func, num_parallel_calls=AUTOTUNE))
         if mode == 'val':
             batch_size = self.val_batch_size
             n_el = self.num_val_batch
-        else:
+        elif mode == "train":
             batch_size = self.batchSize
             n_el = self.num_train_batch
-
-        dataset = (tf.data.Dataset.from_tensor_slices(self.img_generator(mode, self.numClasses))
-                   .shuffle(buffer_size=n_el * batch_size)
-                   .map(parse_path_func, num_parallel_calls=AUTOTUNE)
-                   .map(normalize_func, num_parallel_calls=AUTOTUNE)  # normalize input for mean and std
-                   .map(create_croppings_func, num_parallel_calls=AUTOTUNE)  # create actual one_crop
-                   .batch(batch_size)  # defined batch_size
-                   .prefetch(AUTOTUNE)  # number of batches to be prefetch.
-                   .repeat()  # repeats the dataset when it is finished
-                   )
-        return dataset
+            dataset = (dataset.map(add_grayscale_func, num_parallel_calls=AUTOTUNE))  # normalize input for mean and std
+        elif mode == "test":
+            batch_size = self.batchSize
+            n_el = self.num_test_batch
+        else:
+            raise ValueError("Bad mode. Choose between train, test or val")
+        return (dataset
+                .shuffle(buffer_size=n_el * batch_size)
+                .map(create_croppings_func, num_parallel_calls=AUTOTUNE)  # create actual one_crop
+                .batch(batch_size)  # defined batch_size
+                .prefetch(AUTOTUNE)  # number of batches to be prefetch.
+                .repeat()  # repeats the dataset when it is finished
+                )
 
 
 # UNCOMMENT ADDITION AND DIVISION PER MEAN AND STD BEFORE TRY TO SEE IMAGES
