@@ -242,22 +242,27 @@ class CropsGenerator:
         add_grayscale_func = lambda x, y, z: self.add_grayscale(x, y, z, mode)
         create_croppings_func = lambda x, y, z: self.create_croppings(x, y, z)
 
-        dataset = (tf.data.Dataset.from_tensor_slices(self.img_generator(mode, self.numClasses))
-                   .map(parse_path_func, num_parallel_calls=AUTOTUNE))
+        add_grayscale = False
+
         if mode == 'val':
             batch_size = self.val_batch_size
             n_el = self.num_val_batch
         elif mode == "train":
             batch_size = self.batchSize
             n_el = self.num_train_batch
-            dataset = (dataset.map(add_grayscale_func, num_parallel_calls=AUTOTUNE))  # normalize input for mean and std
+            add_grayscale = True
         elif mode == "test":
             batch_size = self.batchSize
             n_el = self.num_test_batch
         else:
             raise ValueError("Bad mode. Choose between train, test or val")
+
+        dataset = (tf.data.Dataset.from_tensor_slices(self.img_generator(mode, self.numClasses))
+                   .shuffle(buffer_size=n_el * batch_size)
+                   .map(parse_path_func, num_parallel_calls=AUTOTUNE))
+        if add_grayscale:
+            dataset = (dataset.map(add_grayscale_func, num_parallel_calls=AUTOTUNE))  # add grayscale img w/ p<0.3 in train
         return (dataset
-                .shuffle(buffer_size=n_el * batch_size)
                 .map(create_croppings_func, num_parallel_calls=AUTOTUNE)  # create actual one_crop
                 .batch(batch_size)  # defined batch_size
                 .prefetch(AUTOTUNE)  # number of batches to be prefetch.
