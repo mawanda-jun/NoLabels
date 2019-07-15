@@ -1,7 +1,8 @@
 import tensorflow as tf
-from tensorflow.python.keras import layers
+from tensorflow.python.keras import layers, regularizers
 from inspect import signature
 from config import conf
+l2 = regularizers.l2()
 tf.enable_eager_execution()
 
 
@@ -78,12 +79,12 @@ class Siamese(tf.keras.Model):
         self.bn3 = layers.BatchNormalization(momentum=0.99, name="batch_norm_3")
         self.maxpool3 = layers.MaxPool2D(3, 2, 'valid', name='MaxPool3')
         self.flatten = layers.Flatten()
-        self.fc6 = layers.Dense(512, activation='relu', name='FC6')
+        self.fc6 = layers.Dense(512, activation='relu', name='FC6', kernel_regularizer=l2, bias_regularizer=l2)
         self.alex_dropout = layers.Dropout(0.5, name='dropout_alexnet')
 
         # define out-of-block layers
         self.dense = layers.Dense(4096, activation='relu', name='FC7')
-        self.bn = layers.BatchNormalization(momentum=0.997, name='batch_norm_last')
+        self.bn = layers.BatchNormalization(momentum=0.995, name='batch_norm_last')
         self.dropout = layers.Dropout(0.5, name='last_dropout')
         self.classifier = layers.Dense(self.num_classes, activation='softmax', name='FC8')
 
