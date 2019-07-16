@@ -2,8 +2,8 @@ import numpy as np
 import h5py
 import random
 import tensorflow as tf
-from config import conf
 import os
+# import config as conf
 from PIL import Image
 from typing import List
 
@@ -299,36 +299,36 @@ class CropsGenerator:
 
 
 # UNCOMMENT ADDITION AND DIVISION PER MEAN AND STD BEFORE TRY TO SEE IMAGES
-if __name__ == '__main__':
-    os.chdir(os.pardir)
-    with h5py.File(os.path.join('Dataset', conf.resources, conf.hammingFileName + str(conf.hammingSetSize) + '.h5'),
-                   'r') as h5f:
-        HammingSet = np.array(h5f['max_hamming_set'])
-
-    data_reader = CropsGenerator(conf, HammingSet)
-
-    iter = data_reader.generate_train_set().make_initializable_iterator()
-    x, labels = iter.get_next()
-
-    with tf.Session() as sess:
-        sess.run(iter.initializer)
-        # returns a batch of images
-        tiles, labels = sess.run([x, labels])
-        # select only one (choose which in [0, batchSize)
-        n_image = 4
-        image = np.array(tiles[n_image], dtype=np.float32)
-        first_label = np.array(labels[n_image])
-        # from one_hot to number
-        lbl = np.where(first_label == np.amax(first_label))[0][0]
-
-        # create complete image with pieces (if label is correct then also will be image)
-        complete = np.zeros((192, 192, 3))
-        tile_size = data_reader.tileSize
-        for i, v in enumerate(data_reader.maxHammingSet[lbl]):
-            row = int(v / 3)
-            col = v % 3
-            y_start = row * tile_size
-            x_start = col * tile_size
-            complete[y_start:y_start + tile_size, x_start:x_start + tile_size] = image[:, :, :, i]
-
-        Image.fromarray(np.array(complete, dtype=np.uint8)).show()
+# if __name__ == '__main__':
+#     os.chdir(os.pardir)
+#     with h5py.File(os.path.join('Dataset', conf.resources, conf.hammingFileName + str(conf.hammingSetSize) + '.h5'),
+#                    'r') as h5f:
+#         HammingSet = np.array(h5f['max_hamming_set'])
+#
+#     data_reader = CropsGenerator(conf, HammingSet)
+#
+#     iter = data_reader.generate_train_set().make_initializable_iterator()
+#     x, labels = iter.get_next()
+#
+#     with tf.Session() as sess:
+#         sess.run(iter.initializer)
+#         # returns a batch of images
+#         tiles, labels = sess.run([x, labels])
+#         # select only one (choose which in [0, batchSize)
+#         n_image = 4
+#         image = np.array(tiles[n_image], dtype=np.float32)
+#         first_label = np.array(labels[n_image])
+#         # from one_hot to number
+#         lbl = np.where(first_label == np.amax(first_label))[0][0]
+#
+#         # create complete image with pieces (if label is correct then also will be image)
+#         complete = np.zeros((192, 192, 3))
+#         tile_size = data_reader.tileSize
+#         for i, v in enumerate(data_reader.maxHammingSet[lbl]):
+#             row = int(v / 3)
+#             col = v % 3
+#             y_start = row * tile_size
+#             x_start = col * tile_size
+#             complete[y_start:y_start + tile_size, x_start:x_start + tile_size] = image[:, :, :, i]
+#
+#         Image.fromarray(np.array(complete, dtype=np.uint8)).show()
