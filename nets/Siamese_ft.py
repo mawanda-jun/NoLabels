@@ -148,10 +148,11 @@ if __name__ == '__main__':
         print(layer)
         layer.trainable = False
 
+
+
     model.compile(optimizer=tf.train.AdamOptimizer(0.001),
                   loss='categorical_crossentropy',
                   metrics=['categorical_accuracy'])
 
-    # TODO fix caricamento pesi
-    # model.load_weights(weights)
+    model.load_weights(weights, 9)
     model.summary()
