@@ -1,7 +1,9 @@
 import tensorflow as tf
 from tensorflow.python.keras import layers
 from inspect import signature
+
 tf.enable_eager_execution()
+
 
 def loss_op(y_pred, y_true):
     diff = tf.losses.softmax_cross_entropy(y_true, y_pred, from_logits=True)
@@ -87,7 +89,7 @@ class SiameseFT(tf.keras.Model):
     """
     Define a Siamese object, on which we can do inference and prediction.
     """
-    def __init__(self, num_classes, **kwargs):
+    def __init__(self, num_clas, **kwargs):
         super(SiameseFT, self).__init__(**kwargs)
 
         self.conv1 = layers.Conv2D(96, 11, 2, 'same', activation='relu', name='CONV1', input_shape=(-1, 64, 64, 3))
@@ -106,7 +108,7 @@ class SiameseFT(tf.keras.Model):
         self.flatten = layers.Flatten()
         self.dense_1 = layers.Dense(512, activation='relu', name='FC1')
         self.dropout = layers.Dropout(0.5)
-        self.dense_2 = layers.Dense(num_classes, activation='softmax', name='FC2')
+        self.dense_2 = layers.Dense(num_clas, activation='softmax', name='FC2')
 
     def call(self, inputs, training=None, mask=None):
         """
@@ -136,12 +138,21 @@ class SiameseFT(tf.keras.Model):
 
 
 if __name__ == '__main__':
-    model = SiameseFT(num_classes=101)
+    model = SiameseFT(num_clas=101)
     dummy_x = tf.zeros((1, 256, 256, 3))
+    weights = "D:/Repo/NoLabels/ResultsJPS/run01/model_dir/weights.01-11.37.hdf5"
     model._set_inputs(dummy_x)
+
+    # freezed of the first 13 layers
+    for layer in model.layers[:13]:
+        print(layer)
+        layer.trainable = False
+
+
+
     model.compile(optimizer=tf.train.AdamOptimizer(0.001),
                   loss='categorical_crossentropy',
                   metrics=['categorical_accuracy'])
 
+    model.load_weights(weights, 9)
     model.summary()
-
