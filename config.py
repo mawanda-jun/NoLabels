@@ -72,10 +72,12 @@ flags.DEFINE_integer('max_epoch', 69, 'maximum number of training epochs')  # wi
 # to reach in order to solve 69 puzzles per image
 
 # Hyper-parameters
-flags.DEFINE_integer('batchSize', 512, 'training batch size')
-flags.DEFINE_integer('val_batch_size', 512, 'validation batch size')  # N_val_imgs/(N_train_imgs / batchSize)
-flags.DEFINE_float('init_lr', 5e-6, 'Initial learning dropout_rate')
-flags.DEFINE_float('lr_min', 1e-8, 'Minimum learning dropout_rate')
+flags.DEFINE_integer('batchSize', 100, 'training batch size')
+flags.DEFINE_integer('val_batch_size', 100, 'validation batch size')  # N_val_imgs/(N_train_imgs / batchSize)
+flags.DEFINE_float('init_lr', 1e-3, 'Initial learning dropout_rate')
+flags.DEFINE_float('decay_rate', 0.97, 'Decay rate for learning rate')
+flags.DEFINE_float('lr_min', 1e-5, 'Minimum learning dropout_rate')
+flags.DEFINE_string('optimizer', 'SGD', 'select optimizer for the model. Choose between "adam" and "SGD"')
 
 # data
 flags.DEFINE_string('data_path', 'Dataset/resources/images/ILSVRC_1400000', 'Data path')
