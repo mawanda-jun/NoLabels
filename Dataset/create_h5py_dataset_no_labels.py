@@ -75,11 +75,11 @@ class ThreadedImageWriter(threading.Thread):
                     # calculate per feature mean and variance on training data only
                     if self.set_type == 'train':
                         # Welford method for online calculation of mean and variance
-                        if i > 0:
-                            # Welford method for online calculation of mean and variance
-                            delta = np.subtract(np_img, self.mean)
-                            self.mean = np.add(self.mean, np.divide(delta, (i + 1)))
-                            self.M2 = np.add(self.M2, np.multiply(delta, np.subtract(np_img, self.mean)))
+                        # when i==0 the step is useless since not mean nor M2 changes. However this is less heavy than
+                        # check i > 0 every iteration.
+                        delta = np.subtract(np_img, self.mean)
+                        self.mean = np.add(self.mean, np.divide(delta, (i + 1)))
+                        self.M2 = np.add(self.M2, np.multiply(delta, np.subtract(np_img, self.mean)))
                     # write images inside h5 file
                     # self.hdf5_out[self.set_type + '_img'][i, ...] = np_img
                     # Image.from_array(np_img).save(os.path.join(dataset_folder, self.type, self.type+str(i)+'.jpg')
