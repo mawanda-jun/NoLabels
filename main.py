@@ -13,6 +13,8 @@ if mode == 'jps':
     from config import conf
 elif mode == 'ft':
     from config_ft import conf_ft
+else:
+    raise ValueError("Mode is not well defined. Please select one from jps and ft")
 
 
 def JPS(conf):
@@ -29,5 +31,5 @@ def FT(conf_ft):
 if __name__ == '__main__':
     if mode == 'jps':
         JPS(conf)
-    elif mode == 'fn':
+    elif mode == 'ft':
         FT(conf_ft)
