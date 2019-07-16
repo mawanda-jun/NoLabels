@@ -7,12 +7,10 @@ import logging
 from Dataset.crops_generator_TF import CropsGenerator
 from tensorflow.python.keras.callbacks import ModelCheckpoint, CSVLogger, TensorBoard
 from nets.Siamese_eager import Siamese
-import time
 
 tf.enable_eager_execution()
 
 
-# device = '/cpu:0' if tfe.num_gpus() == 0 else '/gpu:0'
 class JigsawPuzzleSolver:
     def __init__(self, conf):
         self.conf = conf
@@ -88,18 +86,31 @@ class JigsawPuzzleSolver:
 
         return [checkpointer, csv_logger, tensorboard]
 
-    def compile_model(self):
+    def compile_model(self, mode='train'):
         # set optimizer
-        steps_per_epoch = self.data_reader.num_train_batch
+        if mode == 'train':
+            steps_per_epoch = self.data_reader.num_train_batch
+        elif mode == 'val':
+            steps_per_epoch = self.data_reader.num_val_batch
+        elif mode == 'test':
+            steps_per_epoch = self.data_reader.num_test_batch
+        else:
+            raise ValueError("Bad mode choosen. Please choose between train, val or test")
+
         learning_rate = tf.compat.v1.train.exponential_decay(self.conf.init_lr,
                                                    self.conf.reload_step,
                                                    steps_per_epoch,
-                                                   0.80,
+                                                   self.conf.decay_rate,
                                                    staircase=False)
-        optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate)
+        if self.conf.optimizer == 'SGD':
+            optimizer = tf.keras.optimizers.SGD(learning_rate=learning_rate)
+        elif self.conf.optimizer == 'adam':
+            optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate)
+        else:
+            raise ValueError("This optimizer has not been implemented yet. Please choose between 'adam' or 'SGD'")
 
-        # compile model_on_input with losses and metrics. Even if there is reloading, learning rate and optimizer state is
-        # not saved (yet)
+        # compile model_on_input with losses and metrics. Even if there is reloading, learning rate and optimizer state
+        # cannot be saved (yet)
         loss = tf.keras.losses.CategoricalCrossentropy()
 
         acc = tf.keras.metrics.CategoricalAccuracy()
@@ -115,7 +126,7 @@ class JigsawPuzzleSolver:
             self.reload_weights()
 
         # set optimizer, loss and accuracy and compile model_on_input
-        self.compile_model()
+        self.compile_model('train')
 
         # fit and validate model_on_input
         self.model.fit(
@@ -129,82 +140,13 @@ class JigsawPuzzleSolver:
             initial_epoch=self.conf.reload_step,
         )
 
-    def set_weights_for_model(self):
-        weight_to_be_restored = os.path.join(self.model_dir, self.conf.eval_weight)
-        if not os.path.isfile(weight_to_be_restored):
-            raise FileNotFoundError('Weight not found. Please double check trial_dir, run_name and eval_weight')
-        weights = h5py.File(weight_to_be_restored)
-        AlexNet_weights = weights['alex/siamese/alex']
-        AlexNet = [
-            np.array(AlexNet_weights['CONV1/kernel:0']),
-            np.array(AlexNet_weights['CONV1/bias:0']),
-            np.array(AlexNet_weights['batch_norm_1/gamma:0']),
-            np.array(AlexNet_weights['batch_norm_1/beta:0']),
-            np.array(AlexNet_weights['batch_norm_1/moving_mean:0']),
-            np.array(AlexNet_weights['batch_norm_1/moving_variance:0']),
-            np.array(AlexNet_weights['CONV2/kernel:0']),
-            np.array(AlexNet_weights['CONV2/bias:0']),
-            np.array(AlexNet_weights['batch_norm_2/gamma:0']),
-            np.array(AlexNet_weights['batch_norm_2/beta:0']),
-            np.array(AlexNet_weights['batch_norm_2/moving_mean:0']),
-            np.array(AlexNet_weights['batch_norm_2/moving_variance:0']),
-            np.array(AlexNet_weights['CONV3/kernel:0']),
-            np.array(AlexNet_weights['CONV3/bias:0']),
-            np.array(AlexNet_weights['CONV4/kernel:0']),
-            np.array(AlexNet_weights['CONV4/bias:0']),
-            np.array(AlexNet_weights['CONV5/kernel:0']),
-            np.array(AlexNet_weights['CONV5/bias:0']),
-            np.array(AlexNet_weights['batch_norm_3/gamma:0']),
-            np.array(AlexNet_weights['batch_norm_3/beta:0']),
-            np.array(AlexNet_weights['batch_norm_3/moving_mean:0']),
-            np.array(AlexNet_weights['batch_norm_3/moving_variance:0']),
-            np.array(AlexNet_weights['FC6/kernel:0']),
-            np.array(AlexNet_weights['FC6/bias:0']),
-        ]
-        FC7_weights = weights['FC7/siamese/FC7']
-        FC7 = [
-            np.array(FC7_weights['kernel:0']),
-            np.array(FC7_weights['bias:0']),
-        ]
-        BatchNormLast_weights = weights['batch_norm_last/siamese/batch_norm_last']
-        BatchNormLast = [
-            np.array(BatchNormLast_weights['gamma:0']),
-            np.array(BatchNormLast_weights['beta:0']),
-            np.array(BatchNormLast_weights['moving_mean:0']),
-            np.array(BatchNormLast_weights['moving_variance:0']),
-        ]
-        FC8_weights = weights['FC8/siamese/FC8']
-        FC8 = [
-            np.array(FC8_weights['kernel:0']),
-            np.array(FC8_weights['bias:0']),
-        ]
-        # self.model_on_input.layers[0].set_weights(AlexNet)
-        # self.model_on_input.layers[1].set_weights(FC7)
-        # self.model_on_input.layers[2].set_weights(BatchNormLast)
-        # # self.model_on_input.layers[3].set_weights(AlexNet)
-        # self.model_on_input.layers[4].set_weights(FC8)
-
-        # net net
-        self.model.layers[0].set_weights(AlexNet[0:2])
-        self.model.layers[1].set_weights(AlexNet[2:6])
-        self.model.layers[3].set_weights(AlexNet[6:8])
-        self.model.layers[4].set_weights(AlexNet[8:12])
-        self.model.layers[6].set_weights(AlexNet[12:14])
-        self.model.layers[7].set_weights(AlexNet[14:16])
-        self.model.layers[8].set_weights(AlexNet[16:18])
-        self.model.layers[9].set_weights(AlexNet[18:22])
-        self.model.layers[12].set_weights(AlexNet[22:24])
-        self.model.layers[14].set_weights(FC7)
-        self.model.layers[15].set_weights(BatchNormLast)
-        self.model.layers[17].set_weights(FC8)
-
     def evaluate(self):
         self.model = self.build()
         weight_to_be_restored = os.path.join(self.model_dir, self.conf.eval_weight)
         if not os.path.isfile(weight_to_be_restored):
             raise FileNotFoundError('Weight not found. Please double check trial_dir, run_name and eval_weight')
         self.model.load_weights(weight_to_be_restored, by_name=True)
-        self.compile_model()
+        self.compile_model('test')
         results = self.model.evaluate(
             self.data_reader.generate_test_set(),
             verbose=1,
