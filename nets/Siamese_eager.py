@@ -1,7 +1,6 @@
 import tensorflow as tf
 from tensorflow.python.keras import layers, regularizers
 from inspect import signature
-from config import conf
 l2 = regularizers.l2()
 tf.enable_eager_execution()
 
@@ -134,6 +133,7 @@ class Siamese(tf.keras.Model):
 
 
 if __name__ == '__main__':
+    from config import conf
     inputs = tf.keras.Input(shape=(conf.tileSize, conf.tileSize, conf.numChannels, conf.numCrops))
     model = Siamese(conf)
     model.build(input_shape=inputs.shape)
