@@ -144,11 +144,10 @@ if __name__ == '__main__':
     model._set_inputs(dummy_x)
 
     # freezed of the first 13 layers
+    freezed_layers = ['CONV1', 'CONV2', 'CONV3', 'CONV4', 'CONV5']
     for layer in model.layers[:13]:
-        print(layer)
-        layer.trainable = False
-
-
+        if freezed_layers.__contains__(layer.name):
+            layer.trainable = False
 
     model.compile(optimizer=tf.train.AdamOptimizer(0.001),
                   loss='categorical_crossentropy',
