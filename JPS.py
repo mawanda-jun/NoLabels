@@ -200,21 +200,13 @@ class JigsawPuzzleSolver:
 
     def evaluate(self):
         self.model = self.build()
-        # self.model.summary()
         weight_to_be_restored = os.path.join(self.model_dir, self.conf.eval_weight)
         if not os.path.isfile(weight_to_be_restored):
             raise FileNotFoundError('Weight not found. Please double check trial_dir, run_name and eval_weight')
         self.model.load_weights(weight_to_be_restored, by_name=True)
-        # self.set_weights_for_model()
-        self.compile_model()
-        # self.model_on_input.compile('adam', 'categorical_crossentropy', ['acc'])
-        # self.model.train_on_batch(
-        #     self.data_reader.generate_train_set('train').take(1),
-        #     reset_metrics=False
-        # )
         self.compile_model()
         results = self.model.evaluate(
-            self.data_reader.generate_val_set(),
+            self.data_reader.generate_test_set(),
             verbose=1,
             steps=self.data_reader.num_test_batch,
         )
