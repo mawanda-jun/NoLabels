@@ -141,7 +141,6 @@ class JigsawPuzzleSolver:
         )
 
     def evaluate(self):
-        self.model = self.build()
         weight_to_be_restored = os.path.join(self.model_dir, self.conf.eval_weight)
         if not os.path.isfile(weight_to_be_restored):
             raise FileNotFoundError('Weight not found. Please double check trial_dir, run_name and eval_weight')
