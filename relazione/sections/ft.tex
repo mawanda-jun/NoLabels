@@ -1,0 +1,11 @@
+\subsection{Transfer Learning}
+As the transfer learning experiment described in the paper, we chose to do an classification experiment. We use the CFN weights that we have found at the end of the training of the CFN to initialize the \texttt{conv} layers of the standard AlexNet network. In this way, we have only 8,441,637 parameters to be trained.
+
+The net that we use for this second part is the same of the CFN but is has an additional dense layer at the end.
+
+For this experiment we chose a dataset named "Food 101" \footnote{\url{https://www.kaggle.com/kmader/food41}} that have 100 classes and 1000 of images for each class. We edit the images of the dataset in this way:
+
+\begin{itemize}
+	\item central squared crop of every image;
+	\item resize at 225 x 225 pixel.
+\end{itemize}
