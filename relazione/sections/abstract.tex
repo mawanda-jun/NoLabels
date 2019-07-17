@@ -1,3 +1,3 @@
 \begin{abstract}
-    briefly describe your problem, approach, and key results (no more than 300 words)
+    In this report we study and implement the problem of image representation learning without human annotation presented in \cite{Noroozi_2016}. By following the principles of self-supervision, we build a convolutional neural network that can be trained to solve Jigsaw puzzles as a \emph{pretext} task, which requires no manual labeling, and then later repurposed to solve object classification or detection. To maintain the compatibility across tasks we implemented the \emph{context-free network}, a siamese-eenead CNN. The CFN takes image tiles as input and explicitly limits the receptive context of its early processing units to one tile at a time. Our implementation shows that the learned featured by the pretext task helps in solving the classification problem of Food Images \cite{food_images}.
 \end{abstract}
