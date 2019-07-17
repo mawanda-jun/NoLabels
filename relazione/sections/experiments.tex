@@ -1,4 +1,56 @@
 \section{Experiments}
-discuss the experiments that you performed. The exact experiments will vary depending on the project, but you might compare with prior work, perform an ablation study to determine the impact of various components of your system, experiment with different hyperparameters or architectural choices. You should include graphs, tables, or other figures to illustrate your experimental results.
+\textcolor{red}{discuss the experiments that you performed. The exact experiments will vary depending on the project, but you might compare with prior work, perform an ablation study to determine the impact of various components of your system, experiment with different hyperparameters or architectural choices. You should include graphs, tables, or other figures to illustrate your experimental results.}
+The experimental part is made up of two different parts even if the fine-tuning part depends mostly on the results of the pretext task. 
+
+% ------------------------------------------------------------------------------------------------ %
+
+\subsection{Jigsaw puzzle task performance}
+As seen in \ref{sss:PC_arch} and \ref{sss:GCP_arch} we used two different network architectures to train the Jigsaw puzzle that served two different purposes:
+\begin{itemize}
+    \item the PC network to implement the paper pretext task \emph{as-it-is};
+    \item the GCP network to try to outperform previous results in performances and execution time.
+\end{itemize}
+The training tactics have been slightly different, so they will be presented in two separated sections.
+
+\subsubsection{The PC network training}\label{sss:PC_training}
+We trained the PC network making use of those assumptions:
+\begin{itemize}
+    \item \textbf{tunable parameters}: the tunable parameters were the batch size, the learning rate, its decay rate and the momentum of SGD optimizer;
+    \item \textbf{parameters search}: since the GPU RAM was not so big we set the batch size as high as possible to fit the entire GPU. In this way we set it to 100 both for training and validation. As regard the learning rate, its decay rate and the momentum we tried different combination until we got a good result. We read many articles to understand the best way to tune those parameters until one \cite{SGD_momentum} gave us the theory and the \textit{rule-of-thumb}: the more the momentum, the less the learning rate;
+    \item \textbf{stopping policy}: we used the early stopping policy to stop the training whenever the validation loss started to increase. In this way we let the personal computer to run the session only until it was useful and to stop as soon as possible.
+\end{itemize}
+The training usually took ~7h before overfitting
+
+
+\subsubsection{The PC network training}\label{sss:GCP_training}
+\begin{itemize}
+    \item empty
+\end{itemize}
+
+
+
+% ------------------------------------------------------------------------------------------------ %
+
+\subsection{Fine-tuning on Food Dataset}
+
+% ------------------------------------------------------------------------------------------------ %
+
+\subsection{Machines details}\label{ss:machines}
+The personal computer with which we have trained the pre-task neural network is a laptop with:
+\begin{itemize}
+    \item CPU: Intel Core i5 8300H (2.30GHz, 3.90GHz Turbo);
+    \item GPU: NVidia GTX 1050 (4GB RAM);
+    \item Memory: 16GB DDR4 2666MHz;
+    \item Persistency: SSD Samsung 970 evo NVMe;
+    \item O.S.: Windows 10 Home.
+\end{itemize}
+The virtual machine that we have instantiated is composed of:
+\begin{itemize}
+    \item vCPU: 4-core;
+    \item GPU: NVidia Tesla T4 (12GB RAM);
+    \item vMemory: 7.8GB
+    \item Persistency: SSD 65GB;
+    \item O.S.: Ubuntu 18.10.
+\end{itemize}
 
 

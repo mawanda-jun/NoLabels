@@ -88,7 +88,7 @@ FOR METHOD: discuss your approach for solving the problems that you set up in th
 The dataset for the Jigsaw puzzle solver task is composed by squared images. Every images must be cropped into pieces, then fed into the Siamese network. No labels required. This is why we decided to use the Object Localization dataset \cite{ILSVRC15} of the ImageNet Large Scale Visual Recognition Challenge (ILSVRC2017). This dataset contains ~1.281M images for the training set, 50K validation images and 100K for the test. There are about 1K categories with a range from 732 to 1300 images each. All images are in JPEG format.
 
 \subsubsection{Select and crop images}\label{sss:select_crop_image}
-once the images has been downloaded we decided to build our own dataset on the basis of what we needed for the pre-task. So we prepared two datasets, both divided into 70\% training, 25\% validation and 5\% test:
+once the images have been downloaded we decided to build our own dataset on the basis of what we needed for the pre-task. So we prepared two datasets, both divided into 70\% training, 25\% validation and 5\% test:
 \begin{itemize}
     \item one made of a total of 500K random images, that served the model trained with a personal computer;
     \item one made of a total of 1.4M random images, that served the model trained with a virtual machine hosted in Google Cloud Platform.
@@ -147,44 +147,25 @@ Since we needed a Siamese network with shared weights, we could not take benefit
 \end{enumerate}
 This configuration let us save and restore the weights easily for the target task, since the architecture remains mostly the same, apart from the \emph{call} method.
 
-\subsubsection{The PC architecture}
+\subsubsection{The PC architecture}\label{sss:PC_arch}
 We calls the architecture that we trained in the personal computer the "PC" architecture, in contrast with the "GCP" one that we trained in Google Cloud Platform.\newline
 The PC network is well represented in fig. \ref{fig:PC_net}.
 \begin{figure}[!ht]
     \centering
-    \includegraphics[scale=0.34]{images/PC_net.png}
+    \includegraphics[scale=0.45]{images/PC_net.png}
     \caption{Architecture of the PC neural network.}
     \label{fig:PC_net}
 \end{figure}
-In this architecture we implemented all the features that were present in the original paper \cite{Noroozi_2016} with no addictions. All the activations are \emph{relu}s, the dimensions of the kernels are already listed in fig. \ref{fig:siamese_network}. We used the Stochastic Gradient Descent optimizer as precised in the previous article. More information about the parameters and the training tactics are presented in \textcolor{red}{REFER TO SECTION EXPERIMENTS}
+In this architecture we implemented all the features that were present in the original paper \cite{Noroozi_2016} with no addictions. All the activations are \emph{relu}s, the dimensions of the kernels are already listed in fig. \ref{fig:siamese_network}. We used the Nesterov Stochastic Gradient Descent optimizer with momentum as precised in the paper. More information about the parameters and the training tactics are presented in \ref{sss:PC_training}.
 
-\subsubsection{The GCP architecture}
+\subsubsection{The GCP architecture}\label{sss:GCP_arch}
 The GCP architecture is showed in fig. \ref{fig:GCP_net}. The main two changes are the batch normalization layers and the optimizer as we used Adam.
 \begin{figure}[!ht]
     \centering
-    \includegraphics[scale=0.34]{images/GCP_net.png}
+    \includegraphics[scale=0.45]{images/GCP_net.png}
     \caption{Architecture of the GCP neural network.}
     \label{fig:GCP_net}
 \end{figure}
 The training task we asked the network was the same as in the original paper, with slightly the same number of images (1.4M instead of 1.3M). So we decided to try to test different architecture to see if we were able to gain performances.\newline
 We decided to give batch normalization a chance since it has been demonstrated \cite{batch_norm_paper} that the reduction of the covariate shift between internal layers can speed up the training. The pre-task training was already faster than some other previous works \cite{Noroozi_2016}[tab.1], however they decided not to use batch normalization layers. We were curious to see if this kind of normalization between convolutions with shared weights would have helped the training task. \newline
-As regard the optimizer, Adam is an adaptive learning rate optimization algorithm that has been designed specifically for training deep neural networks \cite{adam_trend}. The paper contained some very promising diagrams, showing huge performance gains in term of speed of training. However it has been studied that adaptive methods (such as Adam or Adadelta) do not generalize as well as SGD with momentum \cite{adam_generalization} when tested on a diverse set of deep learning tasks. Despite this we wanted to try and see the performance of this optimizer applied to our pre-task problem.
-
-\subsection{Machines details}\label{ss:machines}
-\textcolor{red}{MOVE UNDER EXPERIMENT SECTION}
-The personal computer with which we have trained the pre-task neural network is a laptop with:
-\begin{itemize}
-    \item CPU: Intel Core i5 8300H (2.30GHz, 3.90GHz Turbo);
-    \item GPU: NVidia GTX 1050 (4GB RAM);
-    \item Memory: 16GB DDR4 2666MHz;
-    \item Persistency: SSD Samsung 970 evo NVMe;
-    \item O.S.: Windows 10 Home.
-\end{itemize}
-The virtual machine that we have instantiated is composed of:
-\begin{itemize}
-    \item vCPU: 4-core;
-    \item GPU: NVidia Tesla T4 (12GB RAM);
-    \item vMemory: 7.8GB
-    \item Persistency: SSD 65GB;
-    \item O.S.: Ubuntu 18.10.
-\end{itemize}
+As regard the optimizer, Adam is an adaptive learning rate optimization algorithm that has been designed specifically for training deep neural networks \cite{adam_trend}. The paper contained some very promising diagrams, showing huge performance gains in term of speed of training. However it has been studied that adaptive methods (such as Adam or Adadelta) do not generalize as well as SGD with momentum \cite{adam_generalization} when tested on a diverse set of deep learning tasks. Despite this we wanted to try and see the performance of this optimizer applied to our pre-task problem. More information about the parameters and the training tactics and results are presented in \ref{sss:GCP_training}
