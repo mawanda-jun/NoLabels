@@ -5,10 +5,16 @@ An immediate approach to solve the Jigsaw puzzle is to stack the tiles of the pu
 % ------------------------------------------------------------------------------------------------ %
 
 \subsection{The Context-Free Architecture}\label{ss:CFN}
-The solution found in \cite{Noroozi_2016} is to build a siamese convolutional network, where AlexNet (until layer \textit{fc6}) is used for each crop of the puzzle, with shared weights. The outputs of all \textit{fc6} layers are concatenated and given as input to the fully connected layer \textit{fc7}. In this way each patch is given to a different AlexNet separately, until the very last fully connected layer: the \textit{fc7} is responsible for the understanding of the rearrangement of the tiles - the context of the objet. This is why this network architecture has been called \textit{context-free}: each patch remains separated from the others until the last layer that handles the context of the object. \newline
-The performance of this architecture is similar to the AlexNet one in the classification task on the ImageNet 2012 dataset \cite{Imagenet_large_scale_hierarchical_image_database}. However the CFN is more compact than AlexNet: the first depends on \(27.5M\) parameters, the latter on \(61M\). In addition the network can be used interchangeably for different tasks including detection and classification. \newline
+The solution found in \cite{Noroozi_2016} is to build a siamese convolutional network (see fig. \ref{fig:siamese_network}), where AlexNet (until layer \textit{fc6}) is used for each crop of the puzzle, with shared weights. The outputs of all \textit{fc6} layers are concatenated and given as input to the fully connected layer \textit{fc7}. In this way each patch is given to a different AlexNet separately, until the very last fully connected layer: the \textit{fc7} is responsible for the understanding of the rearrangement of the tiles - the context of the objet. This is why this network architecture has been called \textit{context-free}: each patch remains separated from the others until the last layer that handles the context of the object. \newline
+The performance of this architecture is similar to the AlexNet one in the classification task on the ImageNet 2012 dataset \cite{Imagenet_large_scale_hierarchical_image_database}. However the CFN is more compact than AlexNet: the first depends on \(27.5M\) parameters, the latter on \(61M\). In addition the network can be used interchangeably for different tasks including detection and classification.
+\begin{figure}[!ht]
+    \centering
+    \includegraphics[scale=0.26]{images/Siamese_diagram.png}
+    \caption{The Siamese network. The layers inside the AlexNet block have shared weights.}
+    \label{fig:siamese_network}
+\end{figure}
 In the next section we show how to train the CFN for the Jigsaw Puzzle reassembly.
-\textcolor{red}{aggiungere immagine della rete siamese}
+
 
 % ------------------------------------------------------------------------------------------------ %
 
@@ -100,32 +106,55 @@ Moreover we used the Welford's online algorithm \cite{Welford_online_algorithm} 
 to create the Hamming set the algorithm \ref{a:hm} has been implemented. In particular we used the maximum euclidean distance between $P$ and $\bar{P}$. As regard the network on the personal computer, we decided to generate 40 permutations; for the GCP one 100 as this was the best compromise \cite{Noroozi_2016}[Tab.4] between the difficulty of the training of the pre-task and the results of the target task.
 
 \subsubsection{The Data Pipeline}
-for the implementation of the dataset we decided to use Tensorflow in Python. This was the best choice since we decided to use the same framework also for the design of the Siamese network (see \ref{ss:siamese}). We implemented the data stream trying to:
+for the implementation of the dataset we decided to use TensorFlow in Python. This was the best choice since we decided to use the same framework also for the design of the Siamese network (see \ref{ss:siamese}). We implemented the data stream trying to:
 \begin{itemize}
     \item reduce the memory usage of the dataset both for RAM and GPU;
     \item speed up the data flow from the persistency to the GPU.
 \end{itemize}
-We decided to use the Tensorflow \emph{tf.data.Dataset} API \cite{tf_data_dataset}: this API provides many powerful tools to read images, manage the data stream and serve the dataset to the network.
-In a first moment we decided to store the whole dataset inside a \emph{h5} format file, in which the images were store as \emph{numpy} arrays. In this way the dataset was a big blob file, easy to manage and access. With this kind of persistency, we created a generator that read the images one at a time and serve to the \emph{Dataset from generator} API of Tensorflow. This approach was succesfull because there was a minimum memory usage since every image was loaded in a binary mode. While in the personal computer all the resources were used, once we moved to the Google Cloud Platform we realized that the online GPU was barely exploited. This was because the GPU was much powerful and it processed much more images than the generator could provide. 
-So we decided to change approach: first we saved the images produced in \ref{sss:select_crop_image} as new images on disk. Then we collected the all paths to the images, and let the \emph{tf.io} API to read them. In this way the shuffling was applied to very little string object, and the Tensorflow API was responsible for reading and parsing every image in a concurrent way.\newline
-As regard the data transformations, we implemented every step in \ref{s:training_CFN}. We implemented every transformation as a \emph{lambda} python callable function, that we included in the \emph{tf.data.Dataset} pipeline with the specific \emph{dataset.map} method. This let Tensorflow to manage the reading and preprocessing of the images within the computational graph, in a concurrent (and distributed, if necessary) manner, mainly with the GPU cores. The steps are the following:
+We decided to use the TensorFlow \emph{tf.data.Dataset} API \cite{tf_data_dataset}: this API provides many powerful tools to read images, manage the data stream and serve the dataset to the network.
+In a first moment we decided to store the whole dataset inside a \emph{h5} format file, in which the images were store as \emph{numpy} arrays. In this way the dataset was a big blob file, easy to manage and access. With this kind of persistency, we created a generator that read the images one at a time and serve to the \emph{Dataset from generator} API of TensorFlow. This approach was succesfull because there was a minimum memory usage since every image was loaded in a binary mode. While in the personal computer all the resources were used, once we moved to the Google Cloud Platform we realized that the online GPU was barely exploited. This was because the GPU was much powerful and it processed much more images than the generator could provide. 
+So we decided to change approach: first we saved the images produced in \ref{sss:select_crop_image} as new images on disk. Then we collected the all paths to the images, and let the \emph{tf.io} API to read them. In this way the shuffling was applied to very little string object, and the TensorFlow API was responsible for reading and parsing every image in a concurrent way.\newline
+As regard the data transformations, we implemented every step in \ref{s:training_CFN}. We implemented every transformation as a \emph{lambda} python callable function, that we included in the \emph{tf.data.Dataset} pipeline with the specific \emph{dataset.map} method. This let TensorFlow to manage the reading and preprocessing of the images within the computational graph, in a concurrent (and distributed, if necessary) manner, mainly with the GPU cores. The steps are the following:
 \begin{enumerate}
     \item we created the list of paths to train/val/test images and a random list of permutation indexes of the same lenght of the list of paths; in addition, a pointer to the \emph{h5} information file described above. This file is useful to determine the dimension of the sets together with the mean and standard deviation of the training set at compile time, sparing computational power. The list of permutation indexes is generated every repetition of the dataset randomly, so the labels are always different for each epoch;
-    \item we provided the two lists to Tensorflow \emph{tf.io} API, which is responsible for taking one element at a time. It also gives an "imperative" way-of-programming to implement the data pipeline;
+    \item we provided the two lists to TensorFlow \emph{tf.io} API, which is responsible for taking one element at a time. It also gives an "imperative" way-of-programming to implement the data pipeline;
     \item now the image is a tensor of float array of numbers. From every image is subtract the training mean and it is divided for the training variance as specified in \ref{sss:select_crop_image};
     \item with a probability of 30\% the image is then converted to grayscale within the training set;
-    \item the image is cropped as described in the section \ref{p:edge_continuity}: every operation (multiplication, addition, slicing, ecc) is made with the Tensorflow methods and types to keep the computation efficient;
+    \item the image is cropped as described in the section \ref{p:edge_continuity}: every operation (multiplication, addition, slicing, ecc) is made with the TensorFlow methods and types to keep the computation efficient;
     \item every crop is jittered spatially as described in \ref{p:chromatic_aberration};
     \item the label is converted in the OneHot format;
     \item the dataset is now served.
 \end{enumerate}
 
 \subsection{The Siamese Neural Network}\label{ss:siamese}
-The architecture of the Siamese Neural Network, within the AlexNet one, has been well defined in \ref{ss:CFN} and in \cite{alexnet_paper}. Although the number of layers and the dimension of the kernels were strictly defined, we was quite free on the definition of the optimizers, the regularizers and the parameters. In addition, we also tried to insert some other layers - mainly batch normalization ones -, since it has been demonstrated \cite{batch_norm_paper} that the reduction of the covariate shift between internal layers can speed up training.
+The architecture of the Siamese Neural Network, within the AlexNet one, has been well defined in \ref{ss:CFN} and in \cite{alexnet_paper}. Although the number of layers and the dimension of the kernels were strictly defined, we was quite free on the definition of the optimizers, the regularizers and the parameters. In addition, we also tried to insert some other layers - mainly batch normalization ones -, since it has been demonstrated \cite{batch_norm_paper} that the reduction of the covariate shift between internal layers can speed up training. In the next sections we will discuss about the framework that we used and the two planned networks
 
-\subsubsection{Tensorflow and the \emph{eager execution}}
+\subsubsection{TensorFlow and the \emph{eager execution}}
+TensorFlow's eager execution is an imperative programming environment that evaluates operations immediately, without building grapgs: operations return concrete values instead of constructing a computational graph to run later. This makes it easy to get started with TensorFlow and debug models, and it reduces boilerplate as well. Eager execution is a flexible machine learning platform for research and experimentation and provides:
+\begin{itemize}
+    \item \textit{an intuitive interface}: the programmer can structure the code naturally and use Python data structures;
+    \item \textit{easier debugging}: the operations can be called directly and be inspected by standard Python debugging tools;
+    \item \textit{natural control flow}: it can be used the Python control flow instead of the graph one, simplifying the specification of dynamic models.
+\end{itemize}
+We made the first implementation of the Jigsaw puzzle solver method with the computational graph. The debugging was painful; in addition, since the architecture is not a standard one, we encountered many troubles with the operations to be attached to the computational graph, such as the loss and accuracy ops. This is why we decided to move to this new framework and to implement the Jigsaw puzzle solver network from scracth.\newline
+Since we needed a Siamese network with shared weights, we could not take benefits from the \emph{models} that \emph{tf.keras} offers. So we implemented the pre-task neural network as a subclass of the \emph{tf.keras.Model} API. This \emph{Model} class exposes built-in training, evaluation and prediction loops; in addition, it gives the list of its inner layers and the saving and serialization APIs. In this way we wrote all the layers that we needed in the initialization of the class (the AlexNet's layers and the following ones). Then we set the behaviour of the \emph{call} function so:
+\begin{enumerate}
+    \item the \emph{AlexNet} block is called many times as the number of crops: the inputs are the different tiles, one per AlexNet;
+    \item the outputs (the \textit{fc6} layers, one per each AlexNet of the block) are collected and concatenated;
+    \item the concatenation is then provided to the dense and then the output layer is computed.
+\end{enumerate}
+This configuration let us save and restore the weights easily for the target task, since the architecture remains mostly the same, apart from the \emph{call} method.
 
 \subsubsection{The PC architecture}
+We calls the architecture that we trained in the personal computer the "PC" architecture, in contrast with the "GCP" one that we trained in Google Cloud Platform.\newline
+The PC network is well represented in fig. \ref{fig:PC_net}.
+\begin{figure}[!ht]
+    \centering
+    \includegraphics[scale=0.26]{images/PC_net.png}
+    \caption{Architecture of the PC neural network.}
+    \label{fig:PC_net}
+\end{figure}
+In this architecture we implemented all the features that were present in the original paper \cite{Noroozi_2016} with no addictions. All the activations are \emph{relu}s, the dimensions of the kernels are already listed in fig. \ref{fig:siamese_network}. We used the Stochastic Gradient Descent optimizer as precised in the previous article. More information about the parameters and the training tactics are presented in \textcolor{red}{REFER TO SECTION EXPERIMENTS}
 
 \subsubsection{The GCP architecture}
 
