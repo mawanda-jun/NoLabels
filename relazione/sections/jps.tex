@@ -1,5 +1,5 @@
 \section{The Jigsaw Puzzle Problem}
-In the first part of this chapter we will discuss about the theory that has been using while setting the problem. In \ref{s:method} we will explain the implementation details that has been adopted to implement and improve the performance of the paper.\newline
+In the first part of this chapter we will discuss about the theory that has been using while setting the problem. In the second part we will explain the implementation details that has been adopted to implement and improve the performance of the paper.\newline
 An immediate approach to solve the Jigsaw puzzle is to stack the tiles of the puzzles along the axis of the color (so \(9\times3=27\) channels). However, with this approach the net is caused to learn only low-level texture similarities instead of high-level primitives. We as humans use kind of analogies between the tiles - like similar patterns or contiguous borders between pieces - as cues to solve jigsaw puzzles. However this learning does not require any understanding of the global object. Thus, we need a network that delays the computation of statistics across different tiles and that can find the parts arrangement using these features. The objective is to force the network to understand representative features that can discriminate the relative location of each part of an object.
 
 % ------------------------------------------------------------------------------------------------ %
@@ -10,7 +10,7 @@ The performance of this architecture is similar to the AlexNet one in the classi
 \begin{figure}[!ht]
     \centering
     \includegraphics[scale=0.26]{images/Siamese_diagram.png}
-    \caption{The Siamese network. The layers inside the AlexNet block have shared weights.}
+    \caption{The Siamese network. The layers inside the AlexNet block have shared weights. The AlexNet block is composed by the repeated layers.}
     \label{fig:siamese_network}
 \end{figure}
 In the next section we show how to train the CFN for the Jigsaw Puzzle reassembly.
@@ -85,7 +85,7 @@ As shown in \cite{Noroozi_2016}[Tab.5], the application of all of these techniqu
 FOR METHOD: discuss your approach for solving the problems that you set up in the introduction. Why is your approach the right thing to do? Did you consider alternative approaches? It may be helpful to include figures, diagrams, or tables to describe your method or compare it with others.}
 
 \subsection{The Dataset}
-the dataset for the Jigsaw puzzle solver task is composed by squared images. Every images must be cropped into pieces, then fed into the Siamese network. No labels required. This is why we decided to use the Object Localization dataset \cite{ILSVRC15} of the ImageNet Large Scale Visual Recognition Challenge (ILSVRC2017). This dataset contains ~1.281M images for the training set, 50K validation images and 100K for the test. There are about 1K categories with a range from 732 to 1300 images each. All images are in JPEG format.
+The dataset for the Jigsaw puzzle solver task is composed by squared images. Every images must be cropped into pieces, then fed into the Siamese network. No labels required. This is why we decided to use the Object Localization dataset \cite{ILSVRC15} of the ImageNet Large Scale Visual Recognition Challenge (ILSVRC2017). This dataset contains ~1.281M images for the training set, 50K validation images and 100K for the test. There are about 1K categories with a range from 732 to 1300 images each. All images are in JPEG format.
 
 \subsubsection{Select and crop images}\label{sss:select_crop_image}
 once the images has been downloaded we decided to build our own dataset on the basis of what we needed for the pre-task. So we prepared two datasets, both divided into 70\% training, 25\% validation and 5\% test:
@@ -126,8 +126,10 @@ As regard the data transformations, we implemented every step in \ref{s:training
     \item the dataset is now served.
 \end{enumerate}
 
+% ------------------------------------------------------------------------------------------------ %
+
 \subsection{The Siamese Neural Network}\label{ss:siamese}
-The architecture of the Siamese Neural Network, within the AlexNet one, has been well defined in \ref{ss:CFN} and in \cite{alexnet_paper}. Although the number of layers and the dimension of the kernels were strictly defined, we was quite free on the definition of the optimizers, the regularizers and the parameters. In addition, we also tried to insert some other layers - mainly batch normalization ones -, since it has been demonstrated \cite{batch_norm_paper} that the reduction of the covariate shift between internal layers can speed up training. In the next sections we will discuss about the framework that we used and the two planned networks
+The architecture of the Siamese Neural Network, within the AlexNet one, has been well defined in \ref{ss:CFN} and in \cite{alexnet_paper}. Although the number of layers and the dimension of the kernels were strictly defined, we was quite free on the definition of the optimizers, the regularizers and the parameters. In addition, we also tried to insert some other layers - mainly batch normalization ones. In the next sections we will discuss about the framework that we used and the two planned networks
 
 \subsubsection{TensorFlow and the \emph{eager execution}}
 TensorFlow's eager execution \cite{tf_eager} is an imperative programming environment that evaluates operations immediately, without building grapgs: operations return concrete values instead of constructing a computational graph to run later. This makes it easy to get started with TensorFlow and debug models, and it reduces boilerplate as well. Eager execution is a flexible machine learning platform for research and experimentation and provides:
@@ -150,12 +152,38 @@ We calls the architecture that we trained in the personal computer the "PC" arch
 The PC network is well represented in fig. \ref{fig:PC_net}.
 \begin{figure}[!ht]
     \centering
-    \includegraphics[scale=0.26]{images/PC_net.png}
+    \includegraphics[scale=0.34]{images/PC_net.png}
     \caption{Architecture of the PC neural network.}
     \label{fig:PC_net}
 \end{figure}
 In this architecture we implemented all the features that were present in the original paper \cite{Noroozi_2016} with no addictions. All the activations are \emph{relu}s, the dimensions of the kernels are already listed in fig. \ref{fig:siamese_network}. We used the Stochastic Gradient Descent optimizer as precised in the previous article. More information about the parameters and the training tactics are presented in \textcolor{red}{REFER TO SECTION EXPERIMENTS}
 
 \subsubsection{The GCP architecture}
+The GCP architecture is showed in fig. \ref{fig:GCP_net}. The main two changes are the batch normalization layers and the optimizer as we used Adam.
+\begin{figure}[!ht]
+    \centering
+    \includegraphics[scale=0.34]{images/GCP_net.png}
+    \caption{Architecture of the GCP neural network.}
+    \label{fig:GCP_net}
+\end{figure}
+The training task we asked the network was the same as in the original paper, with slightly the same number of images (1.4M instead of 1.3M). So we decided to try to test different architecture to see if we were able to gain performances.\newline
+We decided to give batch normalization a chance since it has been demonstrated \cite{batch_norm_paper} that the reduction of the covariate shift between internal layers can speed up the training. The pre-task training was already faster than some other previous works \cite{Noroozi_2016}[tab.1], however they decided not to use batch normalization layers. We were curious to see if this kind of normalization between convolutions with shared weights would have helped the training task. \newline
+As regard the optimizer, Adam is an adaptive learning rate optimization algorithm that has been designed specifically for training deep neural networks \cite{adam_trend}. The paper contained some very promising diagrams, showing huge performance gains in term of speed of training. However it has been studied that adaptive methods (such as Adam or Adadelta) do not generalize as well as SGD with momentum \cite{adam_generalization} when tested on a diverse set of deep learning tasks. Despite this we wanted to try and see the performance of this optimizer applied to our pre-task problem.
 
-\subsection{Machine details}\label{ss:machines}
+\subsection{Machines details}\label{ss:machines}
+The personal computer with which we have trained the pre-task neural network is a laptop with:
+\begin{itemize}
+    \item CPU: Intel Core i5 8300H (2.30GHz, 3.90GHz Turbo);
+    \item GPU: NVidia GTX 1050 (4GB RAM);
+    \item Memory: 16GB DDR4 2666MHz;
+    \item Persistency: SSD Samsung 970 evo NVMe;
+    \item O.S.: Windows 10 Home.
+\end{itemize}
+The virtual machine that we have instantiated is composed of:
+\begin{itemize}
+    \item vCPU: 4-core;
+    \item GPU: NVidia Tesla T4 (12GB RAM);
+    \item vMemory: 7.8GB
+    \item Persistency: SSD 65GB;
+    \item O.S.: Ubuntu 18.10.
+\end{itemize}
