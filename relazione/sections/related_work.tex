@@ -1,16 +1,18 @@
 \section{Related work}
-discuss published work or similar apps that relates to your project. How is your approach similar or different from others? 
+The work that we are going to study is a problem of \emph{representation/feature learning}, which is an unsupervised learning task. representation learning regards the building of intermediate representations of data useful to solve machine learning tasks. In this project, the features that have been learned by solving the Jigsaw puzzle are repurposed to solve a classification problem. This involves also \emph{transfer learning} via \emph{fine tuning}, which is a process of updating the weights that are obtained from the training from a task to solve another task.
 
-\textcolor{green}{See Related Work section that appears in the paper. I think we should describe each section as it is done in the paper, without the fear of taking <great> inspiration from that part.}
+\subsection{Unsupervised Learning}
+Most techniqued that regards unsupervised learning exploit general-purpose priors such as smoothness, sharing of factors, hierarchical factors, ecc. However a general criterion to design a visual representation is not available. In the context of Computer Vision there are early works on unsupervised learning of models for classification. For example, in \cite{unsupervised_scale_invariant_learning} and \cite{unsupervised_learning_model_recognition} a probabilistic representation of objects as constellations of parts is presented. A limitation is the high computational complexity of these models. We will explain later that the Jigsaw puzzle solver also aims to build a model of both appearance and configuration of the parts.
 
 \subsection{Self-supervised Learning}
-- exploit labels that come for free from the data itself.
--- two types, we choose one
-- other implementation of self-supervised learning
--- we want something that is invariant with the structure of the image: we don't want to solve a jigsaw puzzle on the base of the similarities of the tiles, instead on their differencies. 
+This kind of unsupervised learning exploits labeling that comes for "free" within the data. There are two types of labels that can be used:
+\begin{itemize}
+    \item labels that are easily accessible and are associated with a non-visual signal (such as egomotion);
+    \item labels that are obtained form the structure of the data.
+\end{itemize}
+The paper that we are going to implement uses the latter case as they simply re-use the input images and exploits the pixel arrangement as a label.\newline
+In \cite{context_prediction} Doersch \textit{et al.} train a convolutional network to classify the relative position between two patches. In contrast, in \cite{Noroozi_2016} the Jigsaw puzzle problem is solved by observing all the tiles at the same time. This allows the trained network to intersect all ambiguity sets and possibly reduce them to a singleton.
+Agrawal \textit{et al.} \cite{learning_by_moving} exploits labeling (egomotion) provided by a odometry sensor: they trained a siamese network to estimate egomotion from two images frames and compare it to the egomotion measured with the odometry sensor. The advantage is that labeling is freely available in most cases. However, since the object identity is the same in both images, the intraclass variability may be limited: concentrating on the low-level similarities between the images, some high-level structures would be lost. The Jigsaw puzzle approach ignores the similarities between the tiles and instead focuses on their differences.
 
 \subsection{Jigsaw Puzzle}
-- jigsaw puzzle has been associated with learning since their inception (1760).
-- In this work we want to demonstrate that the accession of the paper is correct: jigsaw puzzle to develop a visuospatial representation of objects in the context of CNNs.
-
-
+Solving Jigsaw puzzles has been associated with learning since their inception in 1760 by John Spilsbury. Studies in Psychonomic show that Jigsaw puzzles can be used to assess visuospatial processing in humans \cite{assessing_visuospatial_processes}. Instead of using Jigsaw puzzles with this purpose, in the referring paper they want to use them to develop a visuospatial representation of objects in the context of CNNs.
