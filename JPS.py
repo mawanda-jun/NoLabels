@@ -7,7 +7,7 @@ from utils.logger import set_logger
 import logging
 from Dataset.crops_generator_TF import CropsGenerator
 from tensorflow.python.keras.callbacks import ModelCheckpoint, CSVLogger, TensorBoard, EarlyStopping
-from nets.Siamese_eager import Siamese
+from nets.Siamese_jps import Siamese
 
 tf.enable_eager_execution()
 
@@ -28,7 +28,7 @@ class JigsawPuzzleSolver:
         self.log_dir, self.model_dir, self.save_dir = self.set_dirs()
 
         # copy configuration inside log_dir
-        copy(os.path.join(os.getcwd(), 'nets', 'Siamese_eager.py'), os.path.join(os.getcwd(), self.log_dir))
+        copy(os.path.join(os.getcwd(), 'nets', 'Siamese_jps.py'), os.path.join(os.getcwd(), self.log_dir))
         copy(os.path.join(os.getcwd(), 'config.py'), os.path.join(os.getcwd(), self.log_dir))
 
     def build(self):
@@ -115,7 +115,12 @@ class JigsawPuzzleSolver:
                                                    self.conf.decay_rate,
                                                    staircase=False)
         if self.conf.optimizer == 'SGD':
-            optimizer = tf.keras.optimizers.SGD(learning_rate=learning_rate)
+            optimizer = tf.keras.optimizers.SGD(
+                learning_rate=learning_rate,
+                momentum=self.conf.sgd_momentum,
+                nesterov=True,
+                name='N_SGD_momentum'
+            )
         elif self.conf.optimizer == 'adam':
             optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate)
         else:

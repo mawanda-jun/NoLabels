@@ -55,7 +55,7 @@ flags.DEFINE_string('mode', 'train', 'train or test')
 flags.DEFINE_string('model_on_input', 'alexnet', 'matrix_capsule or vector_capsule or alexnet')
 
 # hamming set
-flags.DEFINE_integer('hammingSetSize', 100, 'Hamming set size')
+flags.DEFINE_integer('hammingSetSize', 40, 'Hamming set size')
 flags.DEFINE_string('selectionMethod', 'max', 'max or mean')
 flags.DEFINE_string('hammingFileName', 'max_hamming_set_', 'Name of the file to be saved')
 
@@ -74,11 +74,12 @@ flags.DEFINE_integer('max_epoch', 69, 'maximum number of training epochs')  # wi
 # Hyper-parameters
 flags.DEFINE_integer('batchSize', 100, 'training batch size')
 flags.DEFINE_integer('val_batch_size', 100, 'validation batch size')  # N_val_imgs/(N_train_imgs / batchSize)
-flags.DEFINE_float('init_lr', 1e-3, 'Initial learning dropout_rate')
-flags.DEFINE_float('decay_rate', 0.97, 'Decay rate for learning rate')
+flags.DEFINE_float('init_lr', 8e-5, 'Initial learning dropout_rate')
+flags.DEFINE_float('decay_rate', 0.9, 'Decay rate for learning rate')
 flags.DEFINE_float('lr_min', 1e-5, 'Minimum learning dropout_rate')
 flags.DEFINE_string('optimizer', 'SGD', 'select optimizer for the model. Choose between "adam" and "SGD"')
 flags.DEFINE_float('sgd_momentum', 0.99, 'Momentum of the SGD optimizer')
+
 
 # data
 flags.DEFINE_string('data_path', 'Dataset/resources/images/ILSVRC_1400000', 'Data path')
