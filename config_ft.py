@@ -3,7 +3,9 @@ import os
 
 flags = tf.flags
 
+# General network setup
 flags.DEFINE_string('mode', 'train', 'train or test')
+flags.DEFINE_string('model_on_input', 'alexnet', 'matrix_capsule or vector_capsule or alexnet')
 
 # Training logs
 flags.DEFINE_integer('max_epoch', 10000, 'maximum number of training epochs')

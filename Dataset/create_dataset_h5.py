@@ -8,6 +8,11 @@ import threading
 # force pillow to load also truncated images
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 
+# number of images to take from the folder
+N_EL = int(5e5)
+# path/to/folder that contains the images. No particular structure is required and nested folder are accepted.
+RES_PATH = os.path.join('E:\\dataset\\images_only')
+
 
 def square_img(im: Image.Image) -> Image:
     """
@@ -80,9 +85,6 @@ class ThreadedImageWriter(threading.Thread):
                         delta = np.subtract(np_img, self.mean)
                         self.mean = np.add(self.mean, np.divide(delta, (i + 1)))
                         self.M2 = np.add(self.M2, np.multiply(delta, np.subtract(np_img, self.mean)))
-                    # write images inside h5 file
-                    # self.hdf5_out[self.set_type + '_img'][i, ...] = np_img
-                    # Image.from_array(np_img).save(os.path.join(dataset_folder, self.type, self.type+str(i)+'.jpg')
             except OSError as e:
                 self.read_errors.add(str(e) + '\n')
                 continue
@@ -97,13 +99,9 @@ def images_in_paths(folder_path: str) -> List[str]:
     """
     paths = []
     folder_path = os.path.join(os.getcwd(), folder_path)
-    # extensions = set([])
     for root, dirs, files in os.walk(folder_path):
         for file in files:
-            # extensions.add(os.path.splitext(file)[1])
             paths.append(os.path.join(root, file))
-    # with open('extensions.txt', 'w') as f:
-    #     f.writelines([extension + '\n' for extension in extensions])
     return paths
 
 
@@ -179,8 +177,8 @@ def generate_dataset(file_list: List, dataset_folder: str, img_size=256, train_d
 
 if __name__ == '__main__':
     output_path = os.path.join(os.getcwd(), 'resources', 'images')
-    elements = int(5e5)  # number of images to keep
-    res_path = os.path.join('E:\\dataset\\images_only')
+    elements = N_EL
+    res_path = RES_PATH
     images_list = images_in_paths(os.path.join(res_path))
     random.shuffle(images_list)
     images_list = images_list[0:elements]

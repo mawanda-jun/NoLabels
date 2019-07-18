@@ -20,7 +20,7 @@ else:
 def JPS(conf):
     model = JigsawPuzzleSolver(conf)
     model.train()
-    # model.evaluate()
+    model.evaluate()
 
 
 def FT(conf_ft):
