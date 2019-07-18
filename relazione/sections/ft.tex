@@ -19,7 +19,7 @@ We use the CFN weights that we have found at the end of the training of the CFN 
 
 The transfer learning experiment that is describe in the paper use a dataset named \textquotedblleft PASCAL VOC 2007". This dataset has 20 classes and $9,963$ images. We chose to use a different dataset to compare the results at the end of the training.
 
-We select a dataset named \textquotedblleft Food 101" \footnote{\url{https://www.kaggle.com/kmader/food41}} that have 100 classes and 1000 of images for each class. We chosen't to use a \textit{.h5} file for it but to read the images from files. We provide to build a list of realative path to every image of the dataset with the corresponding associate class. Every class is traduce to an integer number. 
+We select a dataset named \textquotedblleft Food 101" \cite{food_images} that have 100 classes and 1000 of images for each class. We chosen't to use a \textit{.h5} file for it but to read the images from files. We provide to build a list of realative path to every image of the dataset with the corresponding associate class. Every class is traduce to an integer number. 
 
 The dataset was divided into 70\% training, 25\% validation and 5\% test.
 We edit the images of the dataset in this way:
