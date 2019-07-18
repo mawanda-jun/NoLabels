@@ -1,11 +1,11 @@
 \section{Related work}
-The work that we are going to study is a problem of \emph{representation/feature learning}, which is an unsupervised learning task. representation learning regards the building of intermediate representations of data useful to solve machine learning tasks. In this project, the features that have been learned by solving the Jigsaw puzzle are repurposed to solve a classification problem. This involves also \emph{transfer learning} via \emph{fine tuning}, which is a process of updating the weights that are obtained from the training from a task to solve another task.
+The work that we are going to study is a problem of \emph{representation/feature learning}, which is an unsupervised learning task. Representation learning regards the building of intermediate representations of data useful to solve machine learning tasks. In this project, the features that have been learned by solving the Jigsaw puzzle are repurposed to solve a classification problem. This involves also \emph{transfer learning} via \emph{fine tuning}, which is a process of updating the weights that are obtained from the training from a task to solve another task.
 
 \subsection{Unsupervised Learning}
 Most techniques that regards unsupervised learning exploit general-purpose priors such as smoothness, sharing of factors, hierarchical factors, etc. However, a general criterion to design a visual representation is not available. In the context of Computer Vision there are early works on unsupervised learning of models for classification. For example, in \cite{unsupervised_scale_invariant_learning} and \cite{unsupervised_learning_model_recognition} a probabilistic representation of objects as constellations of parts is presented. A limitation is the high computational complexity of these models. We will explain later that the Jigsaw puzzle solver also aims to build a model of both appearance and configuration of the parts.
 
 \subsection{Self-supervised Learning}
-This kind of unsupervised learning exploits labeling that comes for "free" within the data. There are two types of labels that can be used:
+This kind of unsupervised learning exploits labeling that comes for \textquotedblleft free" within the data. There are two types of labels that can be used:
 \begin{itemize}
     \item labels that are easily accessible and are associated with a non-visual signal (such as egomotion);
     \item labels that are obtained form the structure of the data.
