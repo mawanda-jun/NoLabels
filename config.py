@@ -78,6 +78,7 @@ flags.DEFINE_float('init_lr', 1e-3, 'Initial learning dropout_rate')
 flags.DEFINE_float('decay_rate', 0.97, 'Decay rate for learning rate')
 flags.DEFINE_float('lr_min', 1e-5, 'Minimum learning dropout_rate')
 flags.DEFINE_string('optimizer', 'SGD', 'select optimizer for the model. Choose between "adam" and "SGD"')
+flags.DEFINE_float('sgd_momentum', 0.99, 'Momentum of the SGD optimizer')
 
 # data
 flags.DEFINE_string('data_path', 'Dataset/resources/images/ILSVRC_1400000', 'Data path')

@@ -2,10 +2,11 @@ import h5py
 import tensorflow as tf
 import numpy as np
 import os
+from shutil import copy
 from utils.logger import set_logger
 import logging
 from Dataset.crops_generator_TF import CropsGenerator
-from tensorflow.python.keras.callbacks import ModelCheckpoint, CSVLogger, TensorBoard
+from tensorflow.python.keras.callbacks import ModelCheckpoint, CSVLogger, TensorBoard, EarlyStopping
 from nets.Siamese_eager import Siamese
 
 tf.enable_eager_execution()
@@ -25,6 +26,10 @@ class JigsawPuzzleSolver:
 
         # if reload_step is not zero it means we are reading data from already existing folders
         self.log_dir, self.model_dir, self.save_dir = self.set_dirs()
+
+        # copy configuration inside log_dir
+        copy(os.path.join(os.getcwd(), 'nets', 'Siamese_eager.py'), os.path.join(os.getcwd(), self.log_dir))
+        copy(os.path.join(os.getcwd(), 'config.py'), os.path.join(os.getcwd(), self.log_dir))
 
     def build(self):
         # initialize model_on_input
@@ -84,7 +89,14 @@ class JigsawPuzzleSolver:
                                   write_images=False,
                                   update_freq=self.conf.batchSize * 10)
 
-        return [checkpointer, csv_logger, tensorboard]
+        # setup early stopping to stop training if val_loss is not increasing after 3 epochs
+        early_stopping = EarlyStopping(
+            monitor='val_loss',
+            patience=1,
+            mode='min',
+        )
+
+        return [checkpointer, csv_logger, tensorboard, early_stopping]
 
     def compile_model(self, mode='train'):
         # set optimizer
