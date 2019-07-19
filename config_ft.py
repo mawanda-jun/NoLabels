@@ -4,7 +4,7 @@ import os
 flags = tf.flags
 
 # General network setup
-flags.DEFINE_string('mode', 'train', 'train or test')
+flags.DEFINE_string('task', 'train', 'train or test')
 flags.DEFINE_string('model_on_input', 'alexnet', 'matrix_capsule or vector_capsule or alexnet')
 
 # Training logs
