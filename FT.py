@@ -1,8 +1,7 @@
 import tensorflow as tf
 import os
-import h5py
-import numpy as np
-from Dataset.crops_generator_TF import CropsGenerator
+from shutil import copy
+from Dataset.data_generator import DataGenerator
 from nets.Siamese_ft import SiameseFT
 import logging
 from tensorflow.python.keras.callbacks import ModelCheckpoint, CSVLogger, TensorBoard
@@ -10,32 +9,53 @@ from utils.logger import set_logger
 
 tf.enable_eager_execution()
 
-class FileTransfer:
+
+class FineTransfer:
     def __init__(self, conf):
         self.conf = conf
-
-        with h5py.File(
-                os.path.join('Dataset', conf.resources, conf.hammingFileName + str(conf.hammingSetSize) + '.h5'),
-                'r') as h5f:
-            self.hamming_set = np.array(h5f['max_hamming_set'])
-
         self.model = self.build()
 
-        self.data_reader = CropsGenerator(conf, self.hamming_set)
+        print('Generating the dataset...')
+        self.dataset = DataGenerator(conf)
+        self.dataset.create()
 
-        if conf.reload_step == 0:
-            # if reload_step is not zero it means we are reading data from already existing folders
-            self.log_dir, self.model_dir, self.save_dir = self.set_dirs()
-        else:
-            # reload step is > 0, then we would like to retrieve weights from disk
-            self.reload_weights()
+        print('Shuffling the dataset...')
+        self.dataset.shuffle(5)
+
+        print('Creating directory...')
+        self.log_dir, self.model_dir, self.save_dir = self.set_dirs()
+
+        print('Copy the configuration inside log dir...')
+        copy(os.path.join(os.getcwd(), 'nets', 'Siamese_ft.py'), os.path.join(os.getcwd(), self.log_dir))
+        copy(os.path.join(os.getcwd(), 'config.py'), os.path.join(os.getcwd(), self.log_dir))
 
     def build(self):
-        # initialize model
-        model = SiameseFT(self.conf.hammingSetSize)
-        # make placeholder to retrieve information about input shape
-        dummy_input = tf.zeros((1, 256, 256, 3))
-        model._set_inputs(dummy_input)
+        model = SiameseFT(self.conf)
+        dummy_x = tf.zeros((1, 256, 256, 3))
+        model._set_inputs(dummy_x)
+
+        freezed_layers = ['CONV1', 'CONV2', 'CONV3', 'CONV4', 'CONV5']
+        for layer in model.layers[:13]:
+            if freezed_layers.__contains__(layer.name):
+                layer.trainable = False
+
+        loss = tf.keras.losses.CategoricalCrossentropy()
+
+        acc = tf.keras.metrics.CategoricalAccuracy()
+
+        learning_rate = tf.train.exponential_decay(self.conf.init_lr,
+                                                   self.conf.reload_step,
+                                                   self.conf.batchSize,
+                                                   0.97,
+                                                   staircase=False)
+
+        optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate)
+
+        model.compile(optimizer=optimizer,
+                           loss=loss,
+                           metrics=[acc])
+
+        model.load_weights(self.conf.weights, 9)
         return model
 
     def set_dirs(self):
@@ -87,33 +107,14 @@ class FileTransfer:
         return [checkpointer, csv_logger, tensorboard]
 
     def train(self):
-        # set optimizer
-        steps_per_epoch = self.data_reader.num_train_batch
-        learning_rate = tf.train.exponential_decay(self.conf.init_lr,
-                                                   self.conf.reload_step,
-                                                   steps_per_epoch,
-                                                   0.97,
-                                                   staircase=False)
-        optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate)
-
-        # compile model with losses and metrics. Even if there is reloading, learning rate and optimizer state is
-        # not saved (yet)
-        self.model.compile(
-            optimizer=optimizer,
-            loss='categorical_crossentropy',
-            metrics=['categorical_accuracy']
-        )
-
-        # print summary of the network
         self.model.summary()
 
-        # fit and validate model
         self.model.fit(
-            self.data_reader.generate(mode='train'),
+            self.dataset.get_training_set(),
             epochs=self.conf.max_epoch,
-            validation_data=self.data_reader.generate(mode='val'),
-            steps_per_epoch=self.data_reader.num_train_batch,
-            validation_steps=self.data_reader.num_val_batch,
+            validation_data=self.dataset.get_validation_set(),
+            steps_per_epoch=self.conf.batchSize,
+            validation_steps=self.conf.val_batch_size,
             verbose=1,
             callbacks=self.setup_callables()
         )
