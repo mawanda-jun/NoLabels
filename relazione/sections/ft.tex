@@ -8,13 +8,13 @@ So, transfer learning is a machine learning technique where a model trained on o
 
 The neural network for this part is the same of the first part, but we add an additional dense layer at the end, as in the paper.
 
-We use the CFN weights that we have found at the end of the training of the CFN to initialize the \texttt{conv} layers of the standard AlexNet network. The others layers have Gaussian noise as initial weights. Than, those the \texttt{conv} layers are freezed during the process of training. In this way, this process allows rapid progess and improved performace when modelling the second task. In fact, we have only $8,441,637$ parameters to be trained with only one instance of the AlexNet.
+We use the CFN weights that we have found at the end of the training of the CFN to initialize the \texttt{conv} layers of the standard AlexNet network. The other layers have Gaussian noise as initial weights. Then, those the \texttt{conv} layers are frozen during the process of training. In this way, this process allows rapid progress and improved performance when modelling the second task. In fact, we have only $8,441,637$ parameters to be trained with only one instance of the AlexNet.
 
 \begin{figure}[!ht]
-	\centering
-	\includegraphics[scale=0.50]{images/FT_net.png}
-	\caption{Architecture of the transfer learning neural network.}
-	\label{fig:FT_net}
+    \centering
+    \includegraphics[scale=0.50]{images/FT_net.png}
+    \caption{Architecture of the transfer learning neural network.}
+    \label{fig:FT_net}
 \end{figure}
 
 The transfer learning experiment that is describe in the paper use a dataset named \textquotedblleft PASCAL VOC 2007". This dataset has 20 classes and $9,963$ images. We chose to use a different dataset to compare the results at the end of the training.
@@ -25,8 +25,8 @@ The dataset was divided into 70\% training, 25\% validation and 5\% test.
 We edit the images of the dataset in this way:
 
 \begin{itemize}
-	\item central squared crop of every image;
-	\item resize at $225 \times 225$ pixel.
+    \item central squared crop of every image;
+    \item resize at $225 \times 225$ pixel.
 \end{itemize}
 
 % We aren't able to have some results for this part.
@@ -34,3 +34,5 @@ We edit the images of the dataset in this way:
 % Now we present a comparison between the results of those two databases:
 
 % TODO: Tabella di confronto tra risultati Pascal e Food
+
+

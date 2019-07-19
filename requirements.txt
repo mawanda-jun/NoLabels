@@ -1,5 +1,5 @@
 scipy
-tensorflow
+tensorflow>=1.14
 tqdm
 pillow
 h5py

@@ -2,25 +2,26 @@ import tensorflow as tf
 from JPS import JigsawPuzzleSolver
 from FT import FineTransfer
 import argparse
-tf.enable_eager_execution()
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-m', '--mode', help='Mode with which to run main: jps or fn (Jiggle Puzzle Solver or Fine Tuning)', required=True)
+parser.add_argument('-m', '--task', help='Mode with which to run main: jps or fn (Jiggle Puzzle Solver or Fine Tuning)', required=True)
 args = vars(parser.parse_args())
-mode = str(args['mode'])
+task = str(args['task'])
 
-if mode == 'jps':
+if task == 'jps':
     from config import conf
-elif mode == 'ft':
+elif task == 'ft':
     from config_ft import conf_ft
 else:
     raise ValueError("Mode is not well defined. Please select one from jps and ft")
+
+tf.enable_eager_execution()
 
 
 def JPS(conf):
     model = JigsawPuzzleSolver(conf)
     model.train()
-    # model.evaluate()
+    model.evaluate()
 
 
 def FT(conf_ft):
@@ -29,7 +30,7 @@ def FT(conf_ft):
 
 
 if __name__ == '__main__':
-    if mode == 'jps':
+    if task == 'jps':
         JPS(conf)
-    elif mode == 'ft':
+    elif task == 'ft':
         FT(conf_ft)

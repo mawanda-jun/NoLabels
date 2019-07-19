@@ -1,5 +1,5 @@
 \section{Experiments}\label{s:experiments}
-We trained the network for about two weeks, looking for the perfect set of parameters. However, two days before delivery we found a bug that invalidated all our results. We was instantiating the training, validation and test set with the same python method with a parameter, that indicated what kind of dataset we needed. The training and validation accuracy was coherent and was going up and down as we changed the hyperparameters, but the fine tuning task was not giving good results. In addition the evaluation of the network was randomic: once it was coherent with the training and validation accuracy, another time was completely different. We debug for many days until we found that probably the computational graph wasn't build too well in case of shared methods (we had not found any literature about this). So we created three distinct (and mostly equal) functions that retrieve the training, validation and test set: this organization let us training and evaluating the network. However the time was too little to train the network sufficiently. We will report the partial training and we will show the complete results as soon as possible or at the oral presentation.\newline
+We trained the network for about two weeks, looking for the perfect set of parameters. However, two days before delivery we found a bug that invalidated all our results. We were instantiating the training, validation and test set with the same python method with a parameter, that indicated what kind of dataset we needed. The training and validation accuracy were coherent and was going up and down as we changed the hyperparameters, but the fine-tuning task was not giving good results. In addition, the evaluation of the network was random: once it was coherent with the training and validation accuracy, another time was completely different. We debug for many days until we found that probably the computational graph wasn't built too well in case of shared weights (we had not found any literature about this). So, we created three distinct (and mostly equal) functions that retrieve the training, validation and test sets: this structure let us train and evaluate the network. However, the time was too little to train the network sufficiently. We will report the partial results and we will show the complete results as soon as possible or at the oral presentation.\newline
 The experimental part is made up of two different parts even if the fine-tuning part depends mostly on the results of the pretext task. 
 
 % ------------------------------------------------------------------------------------------------ %
@@ -10,7 +10,7 @@ As seen in \ref{sss:PC_arch} and \ref{sss:GCP_arch} we used two different networ
     \item the PC network to implement the paper pretext task \emph{as-it-is};
     \item the GCP network to try to outperform previous results in performances and execution time.
 \end{itemize}
-The training tactics have been slightly different, so they will be presented in two separated sections.
+The training tactics have been slightly different, so they will be presented in two separate sections.
 
 \subsubsection{The PC network training}\label{sss:PC_training}
 We trained the PC network making use of those assumptions:
@@ -42,7 +42,7 @@ The best performance that we gained so far is:
     \end{center}
     \caption{Preliminary results for PC network}
 \end{table}
-We can see from fig. \ref{fig:early_PC_acc} and \ref{fig:early_PC_loss} that the results are promising, althtough the network started overfitting as soon as it reached the 0.45\% accuracy on validation set.
+We can see from fig. \ref{fig:early_PC_acc} and \ref{fig:early_PC_loss} that the results are promising, although the network started overfitting as soon as it reached the 0.45\% accuracy on validation set.
 
 \begin{figure}[!ht]
     \centering
@@ -57,14 +57,13 @@ We can see from fig. \ref{fig:early_PC_acc} and \ref{fig:early_PC_loss} that the
     \label{fig:early_PC_loss}
 \end{figure}
 
-
 \subsubsection{The GCP network training}\label{sss:GCP_training}
-The training of the GCP network has been more difficult since we were free to add and remove some other layers in the network. The best configuration we found before the bug was the one explained in \ref{sss:GCP_arch} and gave very good results. However we could not trust those results and we started the training from scratch. We found that the Adam optimizer was more difficult to train since its trend is more sensible to the learning rate and tend to overfit easily. Why controlled that overfit with many batch normalization layers, that stabilized the weights between convolutions and before the output layers. With this in mind, we used those assumption to train the network:
+The training of the GCP network has been more difficult since we were free to add and remove some other layers in the network. The best configuration we found before the bug was the one explained in \ref{sss:GCP_arch} and gave very good results. However, we could not trust those results and we started the training from scratch. We found that the Adam optimizer was more difficult to train since its trend is more sensible to the learning rate and tend to overfit easily. We controlled that overfit with many batch normalization layers, that stabilized the weights between convolutions and before the output layers. With this in mind, we used those assumption to train the network:
 \begin{itemize}
     \item \textbf{tunable hyperparameters}: the tunable parameters were the batch size, the learning rate, its decay rate and the momentum of the batch normalization;
     \item \textbf{position of batch norm layers}: we tried different combination to see in which position the batch normalization layers were more effective in stabilizing the training. We have seen so far that they help more before the max pool layers of the AlexNet block and before the last dropout, near the output;
-    \item \textbf{hyperparameters search}: to stabilize the training we set the batch size to 512, as high as we could. As regard the learning rate, we use it to slow down learning as much as possible, since the Adam optimizer had the tendency to converge rapidly (and to overfit). We used the learning rate decay with the same purpose. The batch normalization momentum was the trickiest hyperparameter to tune: too high parameters carried no learning, too low overfit. We took inspiration from various online articles (see for example \cite{batch_norm_online}), however none of them helped us very much. We finally found that \emph{very} high momentum values were helping us to learn without overfit. In addition we added a L2 regularization for weights and bias of the last AlexNet dense layer: this helped us to slow down learning and stabilize the loss function \cite{l2_neural_networks}. This is why the loss values are higher than the PC counterpart;
-    \item \textbf{stopping policy}: as the online virtual instance of the machine is paid per hour and not per use we only set a maximum value of epochs. In case of overfitting we stopped the training as soon as we saw it.
+    \item \textbf{hyperparameters search}: to speed up learning without loss in generalization we set the batch size to 512, as high as we could. As regard the learning rate, we use it to slow down learning as much as possible, since the Adam optimizer had the tendency to converge rapidly (and to overfit). We tuned the learning rate decay with the same purpose. The batch normalization momentum was the trickiest hyperparameter to be tuned: too high carried no learning, too low overfit. We took inspiration from various online articles (see for example \cite{batch_norm_online}), however none of them helped us very much. We finally found that \emph{very} high momentum values were helping us to learn without overfit. In addition, we added a L2 regularization for weights and bias of the last AlexNet dense layer: this helped us to slow down learning and stabilize the loss function \cite{l2_neural_networks}. Therefore, the loss values are higher than the PC counterpart;
+    \item \textbf{stopping policy}: as the online virtual instance of the machine is paid per hour and not for use we only set a maximum value of epochs. In case of overfitting we stopped the training as soon as we saw it.
 \end{itemize}
 The best performance that we gained so far is:
 \begin{table}[!ht]
@@ -88,7 +87,7 @@ The best performance that we gained so far is:
     \end{center}
     \caption{Preliminary results for GCP network}
 \end{table}
-We can see from fig. \ref{fig:early_GCP_acc} and \ref{fig:early_GCP_loss} that the results are promising, althtough the network started overfitting as soon as it reached the 0.36\% accuracy on validation set.
+We can see from fig. \ref{fig:early_GCP_acc} and \ref{fig:early_GCP_loss} that the results are promising, although the network started overfitting as soon as it reached the 0.36\% accuracy on validation set.
 
 \begin{figure}[!ht]
     \centering
@@ -103,11 +102,10 @@ We can see from fig. \ref{fig:early_GCP_acc} and \ref{fig:early_GCP_loss} that t
     \label{fig:early_GCP_loss}
 \end{figure}
 
-
 % ------------------------------------------------------------------------------------------------ %
 
 \subsection{Fine-tuning on Food Dataset}
-Unfortunately we could not provide any significant result for the fine-tuning task since the pretask networks were not ready to be used so far.
+Unfortunately, we could not provide any significant result for the fine-tuning task since the pretext task networks were not ready to be used so far.
 
 % ------------------------------------------------------------------------------------------------ %
 
@@ -128,5 +126,6 @@ The virtual machine that we have instantiated is composed of:
     \item Persistency: SSD 65GB;
     \item O.S.: Ubuntu 18.10.
 \end{itemize}
+
 
 
