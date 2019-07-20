@@ -14,7 +14,7 @@ flags.DEFINE_integer('VAL_FREQ', 1000, 'Number of step to evaluate the network o
 
 # Hyper-parameters
 # For training
-flags.DEFINE_integer('batchSize', 10, 'training batch size')
+flags.DEFINE_integer('batchSize', 5, 'training batch size')
 flags.DEFINE_integer('val_batch_size', 64, 'validation batch size')
 flags.DEFINE_integer('test_batch_size', 64, 'test batch size')
 flags.DEFINE_float('init_lr', 1e-3, 'Initial learning rate')
