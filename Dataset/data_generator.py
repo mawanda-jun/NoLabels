@@ -48,7 +48,9 @@ class DataGenerator:
                 image_path.append(os.path.join(self.conf.data_path, classes[i], filename))
                 image_class.append(i)
 
-        self.data = list(zip(image_path, image_class))
+        a = list(zip(image_path, image_class))
+
+        self.data = a
 
     def shuffle(self, seed: int = int(random.random() * 100)):
         random.Random(seed).shuffle(self.data)

@@ -1,6 +1,6 @@
 import tensorflow as tf
 from JPS import JigsawPuzzleSolver
-from FT import FineTransfer
+from FT import FineTuning
 import argparse
 
 parser = argparse.ArgumentParser()
@@ -25,7 +25,7 @@ def JPS(conf):
 
 
 def FT(conf_ft):
-    model = FineTransfer(conf_ft)
+    model = FineTuning(conf_ft)
     model.train()
 
 

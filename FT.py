@@ -10,7 +10,7 @@ from utils.logger import set_logger
 tf.enable_eager_execution()
 
 
-class FineTransfer:
+class FineTuning:
     def __init__(self, conf):
         self.conf = conf
         self.model = self.build()
@@ -31,17 +31,17 @@ class FineTransfer:
 
     def build(self):
         model = SiameseFT(self.conf)
-        dummy_x = tf.zeros((1, 256, 256, 3))
+        dummy_x = tf.zeros((1, 225, 225, 3))
         model._set_inputs(dummy_x)
 
-        freezed_layers = ['CONV1', 'CONV2', 'CONV3', 'CONV4', 'CONV5']
-        for layer in model.layers[:13]:
-            if freezed_layers.__contains__(layer.name):
-                layer.trainable = False
+        # freezed_layers = ['CONV1', 'CONV2', 'CONV3', 'CONV4', 'CONV5']
+        # for layer in model.layers[:13]:
+        #     if freezed_layers.__contains__(layer.name):
+        #         layer.trainable = False
 
-        loss = tf.keras.losses.CategoricalCrossentropy()
+        loss = tf.keras.losses.SparseCategoricalCrossentropy()
 
-        acc = tf.keras.metrics.CategoricalAccuracy()
+        acc = tf.keras.metrics.SparseCategoricalAccuracy()
 
         learning_rate = tf.train.exponential_decay(self.conf.init_lr,
                                                    self.conf.reload_step,
@@ -55,7 +55,7 @@ class FineTransfer:
                            loss=loss,
                            metrics=[acc])
 
-        model.load_weights(self.conf.weights, 9)
+        # model.load_weights(self.conf.weights, True)
         return model
 
     def set_dirs(self):
