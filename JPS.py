@@ -1,7 +1,7 @@
 import h5py
 import tensorflow as tf
 import numpy as np
-import os
+import os, glob
 from shutil import copy
 from utils.logger import set_logger
 import logging
@@ -55,16 +55,23 @@ class JigsawPuzzleSolver:
         return log_dir, model_dir, save_dir
 
     def reload_weights(self):
-        list_files = os.listdir(self.model_dir)
-        if len(list_files) > 0:
-            restore_filename = list_files[-1]
-            restore_path = os.path.join(self.model_dir, restore_filename)
-            if os.path.isfile(restore_path):
-                logging.info("Restoring weights in file {}...".format(restore_filename))
-                self.model.load_weights(restore_path)
+        if self.conf.reload_step < 10:
+            init_epoch = '0'+str(self.conf.reload_step)
         else:
-            raise FileNotFoundError("Weights are not present in folder. Please set reload_step to 0 "
-                                    "or double check restore folder")
+            init_epoch = str(self.conf.reload_step)
+        restore_filename_reg = 'weights.{}-*.hdf5'.format(init_epoch)
+        restore_path_reg = os.path.join(self.model_dir, restore_filename_reg)
+        list_files = glob.glob(restore_path_reg)
+        assert len(list_files) > 0, 'ERR: No weights file match provided name {}'.format(
+            restore_path_reg)
+
+        # Take real filename
+        restore_filename = list_files[0].split('/')[-1]
+        restore_path = os.path.join(self.model_dir, restore_filename)
+
+        assert os.path.isfile(restore_path), \
+            'ERR: Weight file in path {} seems not to be a file'.format(restore_path)
+        self.model.load_weights(restore_path)
 
     def setup_callables(self):
         # Setup callback to save best weights after each epoch
@@ -122,7 +129,7 @@ class JigsawPuzzleSolver:
                 name='N_SGD_momentum'
             )
         elif self.conf.optimizer == 'adam':
-            optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate)
+            optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate, name='adam')
         else:
             raise ValueError("This optimizer has not been implemented yet. Please choose between 'adam' or 'SGD'")
 
