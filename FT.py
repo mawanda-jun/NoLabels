@@ -27,7 +27,7 @@ class FineTuning:
 
         print('Copy the configuration inside log dir...')
         copy(os.path.join(os.getcwd(), 'nets', 'Siamese_ft.py'), os.path.join(os.getcwd(), self.log_dir))
-        copy(os.path.join(os.getcwd(), 'config.py'), os.path.join(os.getcwd(), self.log_dir))
+        copy(os.path.join(os.getcwd(), 'config_ft.py'), os.path.join(os.getcwd(), self.log_dir))
 
     def build(self):
         model = SiameseFT(self.conf)
@@ -39,9 +39,9 @@ class FineTuning:
         #     if freezed_layers.__contains__(layer.name):
         #         layer.trainable = False
 
-        loss = tf.keras.losses.SparseCategoricalCrossentropy()
+        loss = tf.keras.losses.CategoricalCrossentropy()
 
-        acc = tf.keras.metrics.SparseCategoricalAccuracy()
+        acc = tf.keras.metrics.CategoricalAccuracy()
 
         learning_rate = tf.train.exponential_decay(self.conf.init_lr,
                                                    self.conf.reload_step,

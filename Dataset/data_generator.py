@@ -16,7 +16,7 @@ class DataGenerator:
         img = tf.cast(img, tf.float32)
         img = tf.image.central_crop(img, central_fraction=1)
         img = tf.image.resize(img, [self.conf.cropSize, self.conf.cropSize])
-        return img, label
+        return img, tf.one_hot(label, 100)
 
     def __fetch_filesnames_label(self, get_train: bool = False, get_test: bool = False, get_validation: bool = False):
         n_examples = len(self.data)
