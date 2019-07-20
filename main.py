@@ -1,6 +1,6 @@
 import tensorflow as tf
 from JPS import JigsawPuzzleSolver
-from FT import FileTransfer
+from FT import FineTransfer
 import argparse
 
 parser = argparse.ArgumentParser()
@@ -25,8 +25,8 @@ def JPS(conf):
 
 
 def FT(conf_ft):
-    model = FileTransfer(conf_ft)
-    # model.train()
+    model = FineTransfer(conf_ft)
+    model.train()
 
 
 if __name__ == '__main__':
