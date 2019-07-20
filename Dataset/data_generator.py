@@ -9,6 +9,9 @@ class DataGenerator:
     def __init__(self, conf):
         self.conf = conf
         self.data = None
+        self.train_size = 0
+        self.val_size = 0
+        self.test_size = 0
 
     def __parse_img(self, image: str, label: str):
         img = tf.io.read_file(image)
@@ -16,7 +19,7 @@ class DataGenerator:
         img = tf.cast(img, tf.float32)
         img = tf.image.central_crop(img, central_fraction=1)
         img = tf.image.resize(img, [self.conf.cropSize, self.conf.cropSize])
-        return img, tf.one_hot(label, 100)
+        return img, label
 
     def __fetch_filesnames_label(self, get_train: bool = False, get_test: bool = False, get_validation: bool = False):
         n_examples = len(self.data)
@@ -61,6 +64,7 @@ class DataGenerator:
     def get_training_set(self):
         parse = lambda f, l: self.__parse_img(f, l)
         filenames, labels = self.__fetch_filesnames_label(get_train=True)
+        self.train_size = len(filenames)
 
         num_samples = len(filenames)
 
@@ -75,6 +79,7 @@ class DataGenerator:
     def get_validation_set(self):
         parse = lambda f, l: self.__parse_img(f, l)
         filenames, labels = self.__fetch_filenames_labels(get_validation=True)
+        self.val_size = len(filenames)
         assert len(filenames) == len(labels), "Filenames and labels should have same length"
 
         num_samples = len(filenames)
@@ -85,9 +90,10 @@ class DataGenerator:
                 .repeat()
                 .prefetch(AUTOTUNE))
 
-    def get_validation_set(self):
+    def get_test_set(self):
         parse = lambda f, l: self.__parse_img(f, l)
         filenames, labels = self.__fetch_filesnames_label(get_validation=True)
+        self.test_size = len(filenames)
         assert len(filenames) == len(labels), "Filenames and labels should have same length"
 
         num_samples = len(filenames)

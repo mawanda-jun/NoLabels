@@ -22,6 +22,10 @@ class FineTuning:
         print('Shuffling the dataset...')
         self.dataset.shuffle(5)
 
+        self.train_set = self.dataset.get_training_set()
+        self.val_set = self.dataset.get_validation_set()
+        self.test_set = self.dataset.get_test_set()
+
         print('Creating directory...')
         self.log_dir, self.model_dir, self.save_dir = self.set_dirs()
 
@@ -39,9 +43,9 @@ class FineTuning:
         #     if freezed_layers.__contains__(layer.name):
         #         layer.trainable = False
 
-        loss = tf.keras.losses.CategoricalCrossentropy()
+        loss = tf.keras.losses.SparseCategoricalCrossentropy()
 
-        acc = tf.keras.metrics.CategoricalAccuracy()
+        acc = tf.keras.metrics.SparseCategoricalAccuracy()
 
         learning_rate = tf.train.exponential_decay(self.conf.init_lr,
                                                    self.conf.reload_step,
@@ -110,11 +114,10 @@ class FineTuning:
         self.model.summary()
 
         self.model.fit(
-            self.dataset.get_training_set(),
+            self.train_set,
             epochs=self.conf.max_epoch,
-            validation_data=self.dataset.get_validation_set(),
-            steps_per_epoch=self.conf.batchSize,
-            validation_steps=self.conf.val_batch_size,
-            verbose=1,
+            validation_data=self.val_set(),
+            steps_per_epoch=self.dataset.train_size // self.conf.batchSize,
+            validation_steps=self.dataset.val_size // self.conf.batchSize,
             callbacks=self.setup_callables()
         )
