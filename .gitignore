@@ -1,6 +1,7 @@
 .idea
 Dataset/resources/*
 ResultsJPS
+ResultsFT
 miscellaneous
 
 # Created by https://www.gitignore.io/api/latex,python,pycharm,visualstudiocode
