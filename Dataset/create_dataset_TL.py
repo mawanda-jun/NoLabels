@@ -1,3 +1,8 @@
+"""
+This file transform the target task dataset into one that is feasible for our FT class.
+Every file is counted, divided between train, validation and test set, cropped and resized.
+Mean and STD are calculated for training set
+"""
 import os
 from typing import List
 import random
@@ -10,8 +15,9 @@ ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 # number of images to take from the folder
 N_EL = int(5e5)
-# path/to/folder that contains the images. No particular structure is required and nested folder are accepted.
-RES_PATH = os.path.join('C:\\Users\\giova\\Downloads\\Dataset_NoLabels\\food41\\images')
+# path/to/folder that contains the images. Every image will be rewritten inside output_path with the name of the
+# original containing folder
+RES_PATH = os.path.join('Dataset/resources/images/food101')
 
 
 def square_img(im: Image.Image) -> Image:
@@ -23,7 +29,7 @@ def square_img(im: Image.Image) -> Image:
     w, h = im.size
     if w == h:
         return im
-    crop_shift = abs(h-w) // 2  # crops only in the dimension that is bigger!
+    crop_shift = abs(h-w) // 2  # central crop
     if w > h:
         # left-upper, right-lower
         # box dimension must be that way
@@ -67,11 +73,7 @@ class ThreadedImageWriter(threading.Thread):
                    tot=len(self.img_list)
                 ))
             try:
-                # some images are not well formatted or have bytes error. So we try to open them and, in case of error,
-                # keep the path inside the array self.errors
                 img = Image.open(path)
-                # in case of b/w images it doesn't breaks the line
-                # if img.mode == 'RGB':
                 img = square_img(img)
                 img = img.resize((self.img_size, self.img_size), resample=Image.LANCZOS)
                 dirname = os.path.dirname(path).split(os.sep)[-1]

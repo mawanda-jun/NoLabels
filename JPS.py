@@ -5,7 +5,7 @@ import os, glob
 from shutil import copy
 from utils.logger import set_logger
 import logging
-from Dataset.crops_generator_TF import CropsGenerator
+from Dataset.crops_generator_JPS import CropsGenerator
 from tensorflow.python.keras.callbacks import ModelCheckpoint, CSVLogger, TensorBoard, EarlyStopping
 from nets.Siamese_jps import Siamese
 

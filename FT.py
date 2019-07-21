@@ -33,7 +33,6 @@ class FineTuning:
 
     def load_weights(self, model):
         weights = h5py.File(self.conf.weights)
-        items = weights.items()
         conv1 = [
             np.array(weights['CONV1/CONV1/kernel:0']),
             np.array(weights['CONV1/CONV1/bias:0'])
@@ -98,17 +97,6 @@ class FineTuning:
         model = SiameseFT(self.conf)
         inputs = tf.keras.Input(shape=(self.conf.img_dim, self.conf.img_dim, self.conf.numChannels))
         model.build(inputs.shape)
-        # dummy_x = tf.zeros((1, 225, 225, 3))
-        # model._set_inputs(dummy_x)
-
-        # freezed_layers = ['CONV1', 'CONV2', 'CONV3', 'CONV4', 'CONV5']
-        # for layer in model.layers[:13]:
-        #     if freezed_layers.__contains__(layer.name):
-        #         layer.trainable = False
-
-        loss = tf.keras.losses.SparseCategoricalCrossentropy()
-
-        acc = tf.keras.metrics.SparseCategoricalAccuracy()
 
         learning_rate = tf.train.exponential_decay(self.conf.init_lr,
                                                    self.conf.reload_step,
@@ -117,13 +105,13 @@ class FineTuning:
                                                    staircase=False)
 
         optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate)
-
+        loss = tf.keras.losses.SparseCategoricalCrossentropy()
+        acc = tf.keras.metrics.SparseCategoricalAccuracy()
         model.compile(optimizer=optimizer,
                            loss=loss,
                            metrics=[acc])
 
         self.load_weights(model)
-        # model.load_weights(self.conf.weights, True)
         return model
 
     def set_dirs(self):

@@ -1,3 +1,8 @@
+"""
+This file is the dataset generator for the target task.
+It uses the structure of train/val/test set images created in file create_dataset_TL.py
+It reads the info about the dataset from its info.h5 file, so it is important to load it before training.
+"""
 import os
 import tensorflow as tf
 import h5py

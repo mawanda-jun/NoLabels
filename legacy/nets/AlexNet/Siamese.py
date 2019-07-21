@@ -13,7 +13,7 @@ from nets.AlexNet.loss_ops import cross_entropy_loss
 from nets.AlexNet.ops import *
 from nets.AlexNet.AlexNet import AlexNet
 import numpy as np
-from Dataset.crops_generator_TF import CropsGenerator
+from Dataset.crops_generator_JPS import CropsGenerator
 import os
 import logging
 
