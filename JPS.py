@@ -31,6 +31,8 @@ class JigsawPuzzleSolver:
         copy(os.path.join(os.getcwd(), 'nets', 'Siamese_jps.py'), os.path.join(os.getcwd(), self.log_dir))
         copy(os.path.join(os.getcwd(), 'config.py'), os.path.join(os.getcwd(), self.log_dir))
 
+        self.trained = False
+
     def build(self):
         # initialize model_on_input
         model = Siamese(self.conf)
@@ -163,13 +165,15 @@ class JigsawPuzzleSolver:
             callbacks=self.setup_callables(),
             initial_epoch=self.conf.reload_step,
         )
+        self.trained = True
 
     def evaluate(self):
-        weight_to_be_restored = os.path.join(self.model_dir, self.conf.eval_weight)
-        if not os.path.isfile(weight_to_be_restored):
-            raise FileNotFoundError('Weight not found. Please double check trial_dir, run_name and eval_weight')
-        self.model.load_weights(weight_to_be_restored, by_name=True)
-        self.compile_model('test')
+        if not self.trained:
+            weight_to_be_restored = os.path.join(self.model_dir, self.conf.eval_weight)
+            if not os.path.isfile(weight_to_be_restored):
+                raise FileNotFoundError('Weight not found. Please double check trial_dir, run_name and eval_weight')
+            self.model.load_weights(weight_to_be_restored, by_name=True)
+            self.compile_model('test')
         results = self.model.evaluate(
             self.data_reader.generate_test_set(),
             verbose=1,
