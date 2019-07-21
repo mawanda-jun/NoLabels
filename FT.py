@@ -19,10 +19,6 @@ class FineTuning:
 
         print('Generating the dataset...')
         self.dataset = DataGenerator(conf)
-        self.dataset.create()
-
-        print('Shuffling the dataset...')
-        self.dataset.shuffle(5)
 
         self.train_set = self.dataset.get_training_set()
         self.val_set = self.dataset.get_validation_set()
@@ -37,7 +33,7 @@ class FineTuning:
 
     def load_weights(self, model):
         weights = h5py.File(self.conf.weights)
-
+        items = weights.items()
         conv1 = [
             np.array(weights['CONV1/CONV1/kernel:0']),
             np.array(weights['CONV1/CONV1/bias:0'])
@@ -59,7 +55,7 @@ class FineTuning:
             np.array(weights['batch_norm_2/batch_norm_2/gamma:0']),
             np.array(weights['batch_norm_2/batch_norm_2/beta:0']),
             np.array(weights['batch_norm_2/batch_norm_2/moving_mean:0']),
-            np.array(weights['batch_norm_2/batch_norm_2/moving_variance:0']),
+            np.array(weights['batch_norm_2/batch_norm_2/moving_variance:0'])
         ]
 
         conv3 = [
@@ -77,18 +73,33 @@ class FineTuning:
             np.array(weights['CONV5/CONV5/bias:0']),
         ]
 
+        batch_norm_3 = [
+            np.array(weights['batch_norm_3/batch_norm_3/gamma:0']),
+            np.array(weights['batch_norm_3/batch_norm_3/beta:0']),
+            np.array(weights['batch_norm_3/batch_norm_3/moving_mean:0']),
+            np.array(weights['batch_norm_3/batch_norm_3/moving_variance:0'])
+        ]
+
         model.layers[0].set_weights(conv1)
         model.layers[1].set_weights(batch_norm_1)
+        # model.layers[2] == maxpool
         model.layers[3].set_weights(conv2)
         model.layers[4].set_weights(batch_norm_2)
+        # model.layers[5] == maxpool
         model.layers[6].set_weights(conv3)
         model.layers[7].set_weights(conv4)
         model.layers[8].set_weights(conv5)
+        model.layers[9].set_weights(batch_norm_3)
+        # model.layers[10] == flatten
+        # model.layers[11] == dense
+        # model.layers[12] == dense
 
     def build(self):
         model = SiameseFT(self.conf)
-        dummy_x = tf.zeros((1, 225, 225, 3))
-        model._set_inputs(dummy_x)
+        inputs = tf.keras.Input(shape=(self.conf.img_dim, self.conf.img_dim, self.conf.numChannels))
+        model.build(inputs.shape)
+        # dummy_x = tf.zeros((1, 225, 225, 3))
+        # model._set_inputs(dummy_x)
 
         # freezed_layers = ['CONV1', 'CONV2', 'CONV3', 'CONV4', 'CONV5']
         # for layer in model.layers[:13]:

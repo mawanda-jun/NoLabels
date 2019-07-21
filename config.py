@@ -43,7 +43,7 @@ flags.DEFINE_string('resources', os.path.join('resources', 'hamming_sets'), 'Pat
 flags.DEFINE_string('run_name', '10_da_continuare', 'Run name')
 flags.DEFINE_string('trial_dir', os.path.join('ResultsJPS'), 'Results saving directory')
 flags.DEFINE_string('model_name', 'model_on_input', 'Model file name')
-flags.DEFINE_integer('reload_step', 2, 'Reload step to continue training')
+flags.DEFINE_integer('reload_step', 10, 'Reload step to continue training')
 flags.DEFINE_string('eval_weight', 'weights.10-3.05.hdf5', 'Select the weight with which evaluate the model_on_input')
 
 conf = tf.flags.FLAGS

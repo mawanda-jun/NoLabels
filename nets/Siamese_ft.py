@@ -25,12 +25,14 @@ class SiameseFT(tf.keras.Model):
         self.conv3 = layers.Conv2D(384, 3, 1, 'same', activation='relu', name='CONV3')
         self.conv4 = layers.Conv2D(384, 3, 1, 'same', activation='relu', name='CONV4')
         self.conv5 = layers.Conv2D(256, 3, 1, 'same', activation='relu', name='CONV5')
+        self.batch_norm_3 = layers.BatchNormalization(momentum=0.9, name="batch_norm_3")
         self.max_pool_3 = layers.MaxPool2D(3, 2, 'same', name='MaxPool3')
 
         self.flatten = layers.Flatten()
-        self.dense_1 = layers.Dense(512, activation='relu', name='FC1')
+        self.dense_1 = layers.Dense(4096, activation='relu', name='FC1')
+        self.batch_norm_last = layers.BatchNormalization(momentum=0.9, name="batch_norm_last")
         self.dropout = layers.Dropout(0.5)
-        self.dense_2 = layers.Dense(conf.num_clas, activation='softmax', name='FC2')
+        self.classifier = layers.Dense(conf.num_clas, activation='softmax', name='classifier')
 
     def call(self, inputs, training=None, mask=None):
         """
@@ -51,12 +53,14 @@ class SiameseFT(tf.keras.Model):
         x = self.conv3(x)
         x = self.conv4(x)
         x = self.conv5(x)
-
+        x = self.batch_norm_3(x, training)
         x = self.max_pool_3(x)
+
         x = self.flatten(x)
         x = self.dense_1(x)
+        x = self.batch_norm_last(x, training)
         x = self.dropout(x, training)
-        return self.dense_2(x)
+        return self.classifier(x)
 
 
 if __name__ == '__main__':
