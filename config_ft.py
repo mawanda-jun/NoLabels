@@ -29,7 +29,7 @@ flags.DEFINE_integer('height', 64, 'Input height size')
 flags.DEFINE_integer('width', 64, 'Input width size')
 flags.DEFINE_integer('depth', 32, 'Input depth size')
 flags.DEFINE_integer('numChannels', 3, 'Input channel size')
-flags.DEFINE_integer('num_clas', 100, 'Number of classification classes')
+flags.DEFINE_integer('num_clas', 101, 'Number of classification classes')
 flags.DEFINE_float('train_size', 0.7, 'Size in % of the training dataset')
 flags.DEFINE_float('val_size', 0.25, 'Size in % of the validation dataset')
 flags.DEFINE_float('test_size', 0.05, 'Size in % of the test dataset')
@@ -52,7 +52,7 @@ flags.DEFINE_string('resources', os.path.join('resources', 'h5_files'), 'Path to
 flags.DEFINE_string('run_name', 'run01', 'Run name')
 flags.DEFINE_string('trial_dir', os.path.join('ResultsFT'), 'Results saving directory')
 flags.DEFINE_integer('reload_step', 0, 'Reload step to continue training')
-flags.DEFINE_string('weights', 'ResultsJPS/run01/model_dir/weights.01-7.31.hdf5', 'Path to model weights')
+flags.DEFINE_string('weights', 'ResultsJPS/run01/model_dir/weights.06-4.97.hdf5', 'Path to model weights')
 
 
 conf_ft = tf.flags.FLAGS

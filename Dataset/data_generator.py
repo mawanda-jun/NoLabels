@@ -78,7 +78,7 @@ class DataGenerator:
 
     def get_validation_set(self):
         parse = lambda f, l: self.__parse_img(f, l)
-        filenames, labels = self.__fetch_filenames_labels(get_validation=True)
+        filenames, labels = self.__fetch_filesnames_label(get_validation=True)
         self.val_size = len(filenames)
         assert len(filenames) == len(labels), "Filenames and labels should have same length"
 

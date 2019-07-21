@@ -6,6 +6,8 @@ from nets.Siamese_ft import SiameseFT
 import logging
 from tensorflow.python.keras.callbacks import ModelCheckpoint, CSVLogger, TensorBoard
 from utils.logger import set_logger
+import numpy as np
+import h5py
 
 tf.enable_eager_execution()
 
@@ -33,6 +35,56 @@ class FineTuning:
         copy(os.path.join(os.getcwd(), 'nets', 'Siamese_ft.py'), os.path.join(os.getcwd(), self.log_dir))
         copy(os.path.join(os.getcwd(), 'config_ft.py'), os.path.join(os.getcwd(), self.log_dir))
 
+    def load_weights(self, model):
+        weights = h5py.File(self.conf.weights)
+
+        conv1 = [
+            np.array(weights['CONV1/CONV1/kernel:0']),
+            np.array(weights['CONV1/CONV1/bias:0'])
+        ]
+
+        batch_norm_1 = [
+            np.array(weights['batch_norm_1/batch_norm_1/gamma:0']),
+            np.array(weights['batch_norm_1/batch_norm_1/beta:0']),
+            np.array(weights['batch_norm_1/batch_norm_1/moving_mean:0']),
+            np.array(weights['batch_norm_1/batch_norm_1/moving_variance:0'])
+        ]
+
+        conv2 = [
+            np.array(weights['CONV2/CONV2/kernel:0']),
+            np.array(weights['CONV2/CONV2/bias:0']),
+        ]
+
+        batch_norm_2 = [
+            np.array(weights['batch_norm_2/batch_norm_2/gamma:0']),
+            np.array(weights['batch_norm_2/batch_norm_2/beta:0']),
+            np.array(weights['batch_norm_2/batch_norm_2/moving_mean:0']),
+            np.array(weights['batch_norm_2/batch_norm_2/moving_variance:0']),
+        ]
+
+        conv3 = [
+            np.array(weights['CONV3/CONV3/kernel:0']),
+            np.array(weights['CONV3/CONV3/bias:0'])
+        ]
+
+        conv4 = [
+            np.array(weights['CONV4/CONV4/kernel:0']),
+            np.array(weights['CONV4/CONV4/bias:0']),
+        ]
+
+        conv5 = [
+            np.array(weights['CONV5/CONV5/kernel:0']),
+            np.array(weights['CONV5/CONV5/bias:0']),
+        ]
+
+        model.layers[0].set_weights(conv1)
+        model.layers[1].set_weights(batch_norm_1)
+        model.layers[3].set_weights(conv2)
+        model.layers[4].set_weights(batch_norm_2)
+        model.layers[6].set_weights(conv3)
+        model.layers[7].set_weights(conv4)
+        model.layers[8].set_weights(conv5)
+
     def build(self):
         model = SiameseFT(self.conf)
         dummy_x = tf.zeros((1, 225, 225, 3))
@@ -59,6 +111,7 @@ class FineTuning:
                            loss=loss,
                            metrics=[acc])
 
+        self.load_weights(model)
         # model.load_weights(self.conf.weights, True)
         return model
 
@@ -116,7 +169,7 @@ class FineTuning:
         self.model.fit(
             self.train_set,
             epochs=self.conf.max_epoch,
-            validation_data=self.val_set(),
+            validation_data=self.val_set,
             steps_per_epoch=self.dataset.train_size // self.conf.batchSize,
             validation_steps=self.dataset.val_size // self.conf.batchSize,
             callbacks=self.setup_callables()
