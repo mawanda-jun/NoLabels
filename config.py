@@ -26,11 +26,10 @@ flags.DEFINE_integer('max_epoch', 69, 'maximum number of training epochs')
 # Hyper-parameters
 flags.DEFINE_integer('batchSize', 100, 'training batch size')
 flags.DEFINE_integer('val_batch_size', 100, 'validation batch size')
-flags.DEFINE_float('init_lr', 8e-5, 'Initial learning dropout_rate')
-flags.DEFINE_float('decay_rate', 0.9, 'Decay rate for learning rate')
-flags.DEFINE_float('lr_min', 1e-5, 'Minimum learning dropout_rate')
+flags.DEFINE_float('init_lr', 4e-5, 'Initial learning dropout_rate')
+flags.DEFINE_float('decay_rate', 0.99, 'Decay rate for learning rate')
 flags.DEFINE_string('optimizer', 'SGD', 'select optimizer for the model. Choose between "adam" and "SGD"')
-flags.DEFINE_float('sgd_momentum', 0.99, 'Momentum of the SGD optimizer')
+flags.DEFINE_float('sgd_momentum', 0.93, 'Momentum of the SGD optimizer')
 
 
 # data
@@ -41,10 +40,10 @@ flags.DEFINE_integer('numChannels', 3, 'Input channel size')
 
 # Directories and settings
 flags.DEFINE_string('resources', os.path.join('resources', 'hamming_sets'), 'Path to h5 files folder')
-flags.DEFINE_string('run_name', '08_N_SGC_lower_momentum', 'Run name')
+flags.DEFINE_string('run_name', '10_da_continuare', 'Run name')
 flags.DEFINE_string('trial_dir', os.path.join('ResultsJPS'), 'Results saving directory')
 flags.DEFINE_string('model_name', 'model_on_input', 'Model file name')
-flags.DEFINE_integer('reload_step', 0, 'Reload step to continue training')
-flags.DEFINE_string('eval_weight', 'weights.13-2.76.hdf5', 'Select the weight with which evaluate the model_on_input')
+flags.DEFINE_integer('reload_step', 2, 'Reload step to continue training')
+flags.DEFINE_string('eval_weight', 'weights.10-3.05.hdf5', 'Select the weight with which evaluate the model_on_input')
 
 conf = tf.flags.FLAGS
